@@ -7,6 +7,8 @@ import {
   resolveProviderOptions,
 } from "../../session-logic";
 import { useAppSettings } from "../../appSettings";
+import { useQuery } from "@tanstack/react-query";
+import { serverConfigQueryOptions } from "../../lib/serverReactQuery";
 import { ChevronDownIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -81,8 +83,14 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { settings } = useAppSettings();
+  const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const serverClaudeCodeAvailable =
+    serverConfigQuery.data?.providers.some((s) => s.provider === "claudeCode" && s.available) ??
+    false;
   const claudeCodeConfigured =
-    settings.claudeCodeBinaryPath.trim() !== "" || settings.claudeCodeUseBedrock;
+    settings.claudeCodeBinaryPath.trim() !== "" ||
+    settings.claudeCodeUseBedrock ||
+    serverClaudeCodeAvailable;
   const providerOptions = resolveProviderOptions(claudeCodeConfigured);
   const availableProviderOptions = providerOptions.filter(isAvailableProviderOption);
   const unavailableProviderOptions = providerOptions.filter((option) => !option.available);
@@ -177,14 +185,11 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
             <MenuItem key={option.value} disabled>
               <OptionIcon
                 aria-hidden="true"
-                className={cn(
-                  "size-4 shrink-0 opacity-80",
-                  option.value === "claudeCode" ? "" : "text-muted-foreground/85",
-                )}
+                className="size-4 shrink-0 opacity-80 text-muted-foreground/85"
               />
               <span>{option.label}</span>
               <span className="ms-auto text-[11px] text-muted-foreground/80 uppercase tracking-[0.08em]">
-                {option.value === "claudeCode" ? "Configure in Settings" : "Coming soon"}
+                Coming soon
               </span>
             </MenuItem>
           );

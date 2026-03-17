@@ -112,6 +112,10 @@ function SettingsRouteView() {
   const codexHomePath = settings.codexHomePath;
   const keybindingsConfigPath = serverConfigQuery.data?.keybindingsConfigPath ?? null;
   const availableEditors = serverConfigQuery.data?.availableEditors;
+  const serverClaudeCodeStatus = serverConfigQuery.data?.providers.find(
+    (s) => s.provider === "claudeCode",
+  ) ?? null;
+  const bedrockDetectedFromEnv = serverClaudeCodeStatus?.available ?? false;
 
   const openKeybindingsFile = useCallback(() => {
     if (!keybindingsConfigPath) return;
@@ -374,8 +378,8 @@ function SettingsRouteView() {
               <div className="mb-4">
                 <h2 className="text-sm font-medium text-foreground">Claude Code</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Configure Claude Code for use with AWS Bedrock. Once enabled, Claude Code will
-                  appear as an available provider in the chat model picker.
+                  Use Claude Code with AWS Bedrock as the AI provider. Once enabled, Claude Code
+                  will appear in the chat model picker.
                 </p>
               </div>
 
@@ -398,13 +402,33 @@ function SettingsRouteView() {
                   </span>
                 </label>
 
+                {bedrockDetectedFromEnv && (
+                  <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        Bedrock detected from environment
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        <code>CLAUDE_CODE_USE_BEDROCK</code> is active in your shell. Claude Code
+                        will use your existing Bedrock configuration automatically — no additional
+                        setup needed.
+                      </p>
+                    </div>
+                    <span className="rounded bg-primary/14 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                      Active
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Use AWS Bedrock</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {bedrockDetectedFromEnv ? "Override with custom settings" : "Use AWS Bedrock"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      Route Claude Code requests through your AWS account via{" "}
-                      <code>CLAUDE_CODE_USE_BEDROCK</code>. Requires AWS credentials and Bedrock
-                      model access.
+                      {bedrockDetectedFromEnv
+                        ? "Configure specific ARNs and region below instead of using your shell environment."
+                        : "Enable AWS Bedrock and configure region and model ARNs below."}
                     </p>
                   </div>
                   <Switch

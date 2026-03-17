@@ -529,16 +529,58 @@ export default function ChatView({ threadId }: ChatViewProps) {
     return Object.keys(codexOptions).length > 0 ? { codex: codexOptions } : undefined;
   }, [selectedCodexFastModeEnabled, selectedEffort, selectedProvider, supportsReasoningEffort]);
   const providerOptionsForDispatch = useMemo(() => {
-    if (!settings.codexBinaryPath && !settings.codexHomePath) {
-      return undefined;
-    }
+    const codex =
+      settings.codexBinaryPath || settings.codexHomePath
+        ? {
+            ...(settings.codexBinaryPath ? { binaryPath: settings.codexBinaryPath } : {}),
+            ...(settings.codexHomePath ? { homePath: settings.codexHomePath } : {}),
+          }
+        : undefined;
+    const hasClaudeCodeSettings =
+      settings.claudeCodeUseBedrock ||
+      settings.claudeCodeBinaryPath ||
+      settings.claudeCodeAwsRegion ||
+      settings.claudeCodeAwsProfile ||
+      settings.claudeCodeBedrockArnHaiku ||
+      settings.claudeCodeBedrockArnSonnet ||
+      settings.claudeCodeBedrockArnOpus;
+    const claudeCode = hasClaudeCodeSettings
+      ? {
+          ...(settings.claudeCodeUseBedrock ? { useBedrock: true as const } : {}),
+          ...(settings.claudeCodeBinaryPath
+            ? { binaryPath: settings.claudeCodeBinaryPath }
+            : {}),
+          ...(settings.claudeCodeAwsRegion ? { awsRegion: settings.claudeCodeAwsRegion } : {}),
+          ...(settings.claudeCodeAwsProfile
+            ? { awsProfile: settings.claudeCodeAwsProfile }
+            : {}),
+          ...(settings.claudeCodeBedrockArnHaiku
+            ? { bedrockModelOverrideHaiku: settings.claudeCodeBedrockArnHaiku }
+            : {}),
+          ...(settings.claudeCodeBedrockArnSonnet
+            ? { bedrockModelOverrideSonnet: settings.claudeCodeBedrockArnSonnet }
+            : {}),
+          ...(settings.claudeCodeBedrockArnOpus
+            ? { bedrockModelOverrideOpus: settings.claudeCodeBedrockArnOpus }
+            : {}),
+        }
+      : undefined;
+    if (!codex && !claudeCode) return undefined;
     return {
-      codex: {
-        ...(settings.codexBinaryPath ? { binaryPath: settings.codexBinaryPath } : {}),
-        ...(settings.codexHomePath ? { homePath: settings.codexHomePath } : {}),
-      },
+      ...(codex ? { codex } : {}),
+      ...(claudeCode ? { claudeCode } : {}),
     };
-  }, [settings.codexBinaryPath, settings.codexHomePath]);
+  }, [
+    settings.codexBinaryPath,
+    settings.codexHomePath,
+    settings.claudeCodeUseBedrock,
+    settings.claudeCodeBinaryPath,
+    settings.claudeCodeAwsRegion,
+    settings.claudeCodeAwsProfile,
+    settings.claudeCodeBedrockArnHaiku,
+    settings.claudeCodeBedrockArnSonnet,
+    settings.claudeCodeBedrockArnOpus,
+  ]);
   const selectedModelForPicker = selectedModel;
   const modelOptionsByProvider = useMemo(
     () => getCustomModelOptionsByProvider(settings),
@@ -550,8 +592,15 @@ export default function ChatView({ threadId }: ChatViewProps) {
       ? selectedModelForPicker
       : (normalizeModelSlug(selectedModelForPicker, selectedProvider) ?? selectedModelForPicker);
   }, [modelOptionsByProvider, selectedModelForPicker, selectedProvider]);
+  const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const serverClaudeCodeAvailable =
+    serverConfigQuery.data?.providers.some(
+      (s) => s.provider === "claudeCode" && s.available,
+    ) ?? false;
   const claudeCodeConfigured =
-    settings.claudeCodeBinaryPath.trim() !== "" || settings.claudeCodeUseBedrock;
+    settings.claudeCodeBinaryPath.trim() !== "" ||
+    settings.claudeCodeUseBedrock ||
+    serverClaudeCodeAvailable;
   const searchableModelOptions = useMemo(
     () =>
       resolveProviderOptions(claudeCodeConfigured)
@@ -917,7 +966,6 @@ export default function ChatView({ threadId }: ChatViewProps) {
   );
   const effectivePathQuery = pathTriggerQuery.length > 0 ? debouncedPathQuery : "";
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitCwd));
-  const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const workspaceEntriesQuery = useQuery(
     projectSearchEntriesQueryOptions({
       cwd: gitCwd,
@@ -2296,6 +2344,13 @@ export default function ChatView({ threadId }: ChatViewProps) {
 
     setThreadError(threadIdForSend, null);
     promptRef.current = "";
+    // Persist the selected provider and model into the draft before clearing
+    // content, so the draft survives shouldRemoveDraft (which deletes drafts
+    // where all fields are default/null).
+    setComposerDraftProvider(threadIdForSend, selectedProvider);
+    if (selectedModel) {
+      setComposerDraftModel(threadIdForSend, selectedModel);
+    }
     clearComposerDraftContent(threadIdForSend);
     setComposerHighlightedItemId(null);
     setComposerCursor(0);
@@ -2348,7 +2403,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
       }
       const title = truncateTitle(titleSeed);
       let threadCreateModel: ModelSlug =
-        selectedModel || (activeProject.model as ModelSlug) || DEFAULT_MODEL_BY_PROVIDER.codex;
+        selectedModel || (activeProject.model as ModelSlug) || DEFAULT_MODEL_BY_PROVIDER[selectedProvider];
 
       if (isLocalDraftThread) {
         await api.orchestration.dispatchCommand({
@@ -2778,7 +2833,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
       selectedModel ||
       (activeThread.model as ModelSlug) ||
       (activeProject.model as ModelSlug) ||
-      DEFAULT_MODEL_BY_PROVIDER.codex;
+      DEFAULT_MODEL_BY_PROVIDER[selectedProvider];
 
     sendInFlightRef.current = true;
     beginSendPhase("sending-turn");

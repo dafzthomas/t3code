@@ -23,24 +23,31 @@ const AppSettingsSchema = Schema.Struct({
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   claudeCodeBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(
+    Schema.withDecodingDefault(() => ""),
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   claudeCodeUseBedrock: Schema.Boolean.pipe(
+    Schema.withDecodingDefault(() => false),
     Schema.withConstructorDefault(() => Option.some(false)),
   ),
   claudeCodeAwsRegion: Schema.String.check(Schema.isMaxLength(64)).pipe(
+    Schema.withDecodingDefault(() => ""),
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   claudeCodeAwsProfile: Schema.String.check(Schema.isMaxLength(256)).pipe(
+    Schema.withDecodingDefault(() => ""),
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   claudeCodeBedrockArnHaiku: Schema.String.check(Schema.isMaxLength(2048)).pipe(
+    Schema.withDecodingDefault(() => ""),
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   claudeCodeBedrockArnSonnet: Schema.String.check(Schema.isMaxLength(2048)).pipe(
+    Schema.withDecodingDefault(() => ""),
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   claudeCodeBedrockArnOpus: Schema.String.check(Schema.isMaxLength(2048)).pipe(
+    Schema.withDecodingDefault(() => ""),
     Schema.withConstructorDefault(() => Option.some("")),
   ),
   defaultThreadEnvMode: Schema.Literals(["local", "worktree"]).pipe(
@@ -137,7 +144,9 @@ export function resolveAppModelSelection(
   customModels: readonly string[],
   selectedModel: string | null | undefined,
 ): string {
-  const options = getAppModelOptions(provider, customModels, selectedModel);
+  // Do not pass selectedModel into getAppModelOptions — it would self-validate
+  // by adding itself as a custom entry, allowing cross-provider model slugs through.
+  const options = getAppModelOptions(provider, customModels);
   const trimmedSelectedModel = selectedModel?.trim();
   if (trimmedSelectedModel) {
     const direct = options.find((option) => option.slug === trimmedSelectedModel);

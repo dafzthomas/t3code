@@ -390,13 +390,70 @@ export const checkCodexProviderStatus: Effect.Effect<
   } satisfies ServerProviderStatus;
 });
 
+// ── Claude Code / Bedrock env detection ─────────────────────────────
+
+/**
+ * Detect whether the server process already has Bedrock configured via
+ * environment variables set in the user's shell (e.g. from their .zshrc).
+ * If so, report claudeCode as available so the web UI can reflect it.
+ *
+ * When `CLAUDE_CODE_USE_BEDROCK` is not set as an env var, we still report
+ * the provider as ready/available because Bedrock can be configured via
+ * the app settings UI (the `claudeCodeUseBedrock` toggle). We only warn
+ * when the env var IS set but required companion variables are missing.
+ */
+export function detectClaudeCodeBedrockStatus(): ServerProviderStatus {
+  const checkedAt = new Date().toISOString();
+  const useBedrockRaw = process.env.CLAUDE_CODE_USE_BEDROCK;
+  const useBedrockEnabled =
+    useBedrockRaw === "1" || useBedrockRaw?.toLowerCase() === "true";
+
+  if (!useBedrockEnabled) {
+    // Env var not set — Bedrock may still be configured via app settings.
+    // Report as ready so the UI doesn't show a spurious warning banner.
+    return {
+      provider: "claudeCode" as const,
+      status: "ready" as const,
+      available: true,
+      authStatus: "unknown" as const,
+      checkedAt,
+    };
+  }
+
+  const hasMainModel = Boolean(process.env.ANTHROPIC_MODEL);
+  const hasRegion = Boolean(process.env.AWS_REGION);
+
+  if (!hasRegion) {
+    return {
+      provider: "claudeCode" as const,
+      status: "warning" as const,
+      available: true,
+      authStatus: "unknown" as const,
+      checkedAt,
+      message: "CLAUDE_CODE_USE_BEDROCK is set but AWS_REGION is missing.",
+    };
+  }
+
+  return {
+    provider: "claudeCode" as const,
+    status: hasMainModel ? ("ready" as const) : ("warning" as const),
+    available: true,
+    authStatus: "unknown" as const,
+    checkedAt,
+    ...(hasMainModel
+      ? {}
+      : { message: "CLAUDE_CODE_USE_BEDROCK is set but ANTHROPIC_MODEL is not configured." }),
+  };
+}
+
 // ── Layer ───────────────────────────────────────────────────────────
 
 export const ProviderHealthLive = Layer.effect(
   ProviderHealth,
   Effect.gen(function* () {
+    const claudeCodeStatus = detectClaudeCodeBedrockStatus();
     const codexStatusFiber = yield* checkCodexProviderStatus.pipe(
-      Effect.map(Array.of),
+      Effect.map((codexStatus) => [codexStatus, claudeCodeStatus]),
       Effect.forkScoped,
     );
 

@@ -6,7 +6,7 @@ import { Effect, Layer, Stream } from "effect";
 
 import { CodexAdapter, CodexAdapterShape } from "../Services/CodexAdapter.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
-import { ProviderAdapterRegistryLive } from "./ProviderAdapterRegistry.ts";
+import { makeProviderAdapterRegistryLive } from "./ProviderAdapterRegistry.ts";
 import { ProviderUnsupportedError } from "../Errors.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 
@@ -29,7 +29,7 @@ const fakeCodexAdapter: CodexAdapterShape = {
 
 const layer = it.layer(
   Layer.mergeAll(
-    Layer.provide(ProviderAdapterRegistryLive, Layer.succeed(CodexAdapter, fakeCodexAdapter)),
+    makeProviderAdapterRegistryLive({ adapters: [fakeCodexAdapter] }),
     NodeServices.layer,
   ),
 );

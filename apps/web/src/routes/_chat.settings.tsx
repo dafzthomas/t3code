@@ -385,6 +385,152 @@ function SettingsRouteView() {
 
             <section className="rounded-2xl border border-border bg-card p-5">
               <div className="mb-4">
+                <h2 className="text-sm font-medium text-foreground">Claude Bedrock</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Route Claude Agent requests through AWS Bedrock instead of the default Anthropic
+                  API.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Use AWS Bedrock</p>
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, Claude sessions use Bedrock inference via your AWS credentials.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.claudeAgentUseBedrock}
+                    onCheckedChange={(checked) =>
+                      updateSettings({ claudeAgentUseBedrock: Boolean(checked) })
+                    }
+                    aria-label="Use AWS Bedrock for Claude"
+                  />
+                </div>
+
+                {settings.claudeAgentUseBedrock ? (
+                  <div className="space-y-4 rounded-xl border border-border bg-background/50 p-4">
+                    <label htmlFor="claude-aws-region" className="block space-y-1">
+                      <span className="text-xs font-medium text-foreground">AWS Region</span>
+                      <Input
+                        id="claude-aws-region"
+                        value={settings.claudeAgentAwsRegion}
+                        onChange={(event) =>
+                          updateSettings({ claudeAgentAwsRegion: event.target.value })
+                        }
+                        placeholder="us-east-1"
+                        spellCheck={false}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        The AWS region for Bedrock API calls. Leave blank to use the default from
+                        your AWS config.
+                      </span>
+                    </label>
+
+                    <label htmlFor="claude-aws-profile" className="block space-y-1">
+                      <span className="text-xs font-medium text-foreground">AWS Profile</span>
+                      <Input
+                        id="claude-aws-profile"
+                        value={settings.claudeAgentAwsProfile}
+                        onChange={(event) =>
+                          updateSettings({ claudeAgentAwsProfile: event.target.value })
+                        }
+                        placeholder="default"
+                        spellCheck={false}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Named AWS CLI profile to use for credentials. Leave blank for the default
+                        profile.
+                      </span>
+                    </label>
+
+                    <label htmlFor="claude-bedrock-arn-haiku" className="block space-y-1">
+                      <span className="text-xs font-medium text-foreground">
+                        Bedrock Model ARN — Haiku
+                      </span>
+                      <Input
+                        id="claude-bedrock-arn-haiku"
+                        value={settings.claudeAgentBedrockArnHaiku}
+                        onChange={(event) =>
+                          updateSettings({ claudeAgentBedrockArnHaiku: event.target.value })
+                        }
+                        placeholder="arn:aws:bedrock:…"
+                        spellCheck={false}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Optional ARN override for the Haiku model on Bedrock.
+                      </span>
+                    </label>
+
+                    <label htmlFor="claude-bedrock-arn-sonnet" className="block space-y-1">
+                      <span className="text-xs font-medium text-foreground">
+                        Bedrock Model ARN — Sonnet
+                      </span>
+                      <Input
+                        id="claude-bedrock-arn-sonnet"
+                        value={settings.claudeAgentBedrockArnSonnet}
+                        onChange={(event) =>
+                          updateSettings({ claudeAgentBedrockArnSonnet: event.target.value })
+                        }
+                        placeholder="arn:aws:bedrock:…"
+                        spellCheck={false}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Optional ARN override for the Sonnet model on Bedrock.
+                      </span>
+                    </label>
+
+                    <label htmlFor="claude-bedrock-arn-opus" className="block space-y-1">
+                      <span className="text-xs font-medium text-foreground">
+                        Bedrock Model ARN — Opus
+                      </span>
+                      <Input
+                        id="claude-bedrock-arn-opus"
+                        value={settings.claudeAgentBedrockArnOpus}
+                        onChange={(event) =>
+                          updateSettings({ claudeAgentBedrockArnOpus: event.target.value })
+                        }
+                        placeholder="arn:aws:bedrock:…"
+                        spellCheck={false}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        Optional ARN override for the Opus model on Bedrock.
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
+
+                {settings.claudeAgentUseBedrock ||
+                settings.claudeAgentAwsRegion ||
+                settings.claudeAgentAwsProfile ||
+                settings.claudeAgentBedrockArnHaiku ||
+                settings.claudeAgentBedrockArnSonnet ||
+                settings.claudeAgentBedrockArnOpus ? (
+                  <div className="flex justify-end">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() =>
+                        updateSettings({
+                          claudeAgentUseBedrock: defaults.claudeAgentUseBedrock,
+                          claudeAgentAwsRegion: defaults.claudeAgentAwsRegion,
+                          claudeAgentAwsProfile: defaults.claudeAgentAwsProfile,
+                          claudeAgentBedrockArnHaiku: defaults.claudeAgentBedrockArnHaiku,
+                          claudeAgentBedrockArnSonnet: defaults.claudeAgentBedrockArnSonnet,
+                          claudeAgentBedrockArnOpus: defaults.claudeAgentBedrockArnOpus,
+                        })
+                      }
+                    >
+                      Reset Claude Bedrock settings
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-5">
+              <div className="mb-4">
                 <h2 className="text-sm font-medium text-foreground">Models</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Save additional provider model slugs so they appear in the chat model picker and

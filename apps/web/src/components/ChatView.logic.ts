@@ -119,9 +119,14 @@ export function cloneComposerImageForRetry(
 export function getCustomModelOptionsByProvider(settings: {
   customCodexModels: readonly string[];
   customClaudeModels: readonly string[];
+  claudeAgentUseBedrock?: boolean;
 }): Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>> {
+  const claudeAgentOptions = getAppModelOptions("claudeAgent", settings.customClaudeModels);
+  const finalClaudeOptions = settings.claudeAgentUseBedrock
+    ? claudeAgentOptions.map((opt) => ({ ...opt, name: opt.name.replace(/^Claude\b/, "Bedrock") }))
+    : claudeAgentOptions;
   return {
     codex: getAppModelOptions("codex", settings.customCodexModels),
-    claudeAgent: getAppModelOptions("claudeAgent", settings.customClaudeModels),
+    claudeAgent: finalClaudeOptions,
   };
 }

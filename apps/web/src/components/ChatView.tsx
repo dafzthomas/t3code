@@ -535,16 +535,55 @@ export default function ChatView({ threadId }: ChatViewProps) {
     return Object.keys(codexOptions).length > 0 ? { codex: codexOptions } : undefined;
   }, [selectedCodexFastModeEnabled, selectedEffort, selectedProvider, supportsReasoningEffort]);
   const providerOptionsForDispatch = useMemo(() => {
-    if (!settings.codexBinaryPath && !settings.codexHomePath) {
-      return undefined;
-    }
+    const hasCodexSettings = settings.codexBinaryPath || settings.codexHomePath;
+    const codex = hasCodexSettings
+      ? {
+          ...(settings.codexBinaryPath ? { binaryPath: settings.codexBinaryPath } : {}),
+          ...(settings.codexHomePath ? { homePath: settings.codexHomePath } : {}),
+        }
+      : undefined;
+
+    const hasClaudeAgentSettings =
+      settings.claudeAgentUseBedrock ||
+      settings.claudeAgentAwsRegion ||
+      settings.claudeAgentAwsProfile ||
+      settings.claudeAgentBedrockArnHaiku ||
+      settings.claudeAgentBedrockArnSonnet ||
+      settings.claudeAgentBedrockArnOpus;
+    const claudeAgent = hasClaudeAgentSettings
+      ? {
+          ...(settings.claudeAgentUseBedrock ? { useBedrock: true as const } : {}),
+          ...(settings.claudeAgentAwsRegion ? { awsRegion: settings.claudeAgentAwsRegion } : {}),
+          ...(settings.claudeAgentAwsProfile
+            ? { awsProfile: settings.claudeAgentAwsProfile }
+            : {}),
+          ...(settings.claudeAgentBedrockArnHaiku
+            ? { bedrockModelOverrideHaiku: settings.claudeAgentBedrockArnHaiku }
+            : {}),
+          ...(settings.claudeAgentBedrockArnSonnet
+            ? { bedrockModelOverrideSonnet: settings.claudeAgentBedrockArnSonnet }
+            : {}),
+          ...(settings.claudeAgentBedrockArnOpus
+            ? { bedrockModelOverrideOpus: settings.claudeAgentBedrockArnOpus }
+            : {}),
+        }
+      : undefined;
+
+    if (!codex && !claudeAgent) return undefined;
     return {
-      codex: {
-        ...(settings.codexBinaryPath ? { binaryPath: settings.codexBinaryPath } : {}),
-        ...(settings.codexHomePath ? { homePath: settings.codexHomePath } : {}),
-      },
+      ...(codex ? { codex } : {}),
+      ...(claudeAgent ? { claudeAgent } : {}),
     };
-  }, [settings.codexBinaryPath, settings.codexHomePath]);
+  }, [
+    settings.codexBinaryPath,
+    settings.codexHomePath,
+    settings.claudeAgentUseBedrock,
+    settings.claudeAgentAwsRegion,
+    settings.claudeAgentAwsProfile,
+    settings.claudeAgentBedrockArnHaiku,
+    settings.claudeAgentBedrockArnSonnet,
+    settings.claudeAgentBedrockArnOpus,
+  ]);
   const selectedModelForPicker = selectedModel;
   const modelOptionsByProvider = useMemo(
     () => getCustomModelOptionsByProvider(settings),
@@ -3527,6 +3566,9 @@ export default function ChatView({ threadId }: ChatViewProps) {
                         model={selectedModelForPickerWithCustomFallback}
                         lockedProvider={lockedProvider}
                         modelOptionsByProvider={modelOptionsByProvider}
+                        {...(settings.claudeAgentUseBedrock
+                          ? { providerLabelOverrides: { claudeAgent: "Claude Bedrock" } }
+                          : {})}
                         onProviderModelChange={onProviderModelSelect}
                       />
 

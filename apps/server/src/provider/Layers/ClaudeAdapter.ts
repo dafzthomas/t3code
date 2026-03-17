@@ -2142,6 +2142,27 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           toPermissionMode(providerOptions?.permissionMode) ??
           (input.runtimeMode === "full-access" ? "bypassPermissions" : undefined);
 
+        // Build env, merging Bedrock-specific variables when configured via UI.
+        const baseEnv: Record<string, string | undefined> = { ...process.env };
+        if (providerOptions?.useBedrock) {
+          baseEnv.CLAUDE_CODE_USE_BEDROCK = "1";
+        }
+        if (providerOptions?.awsRegion) {
+          baseEnv.AWS_REGION = providerOptions.awsRegion;
+        }
+        if (providerOptions?.awsProfile) {
+          baseEnv.AWS_PROFILE = providerOptions.awsProfile;
+        }
+        if (providerOptions?.bedrockModelOverrideHaiku) {
+          baseEnv.CLAUDE_CODE_BEDROCK_MODEL_HAIKU = providerOptions.bedrockModelOverrideHaiku;
+        }
+        if (providerOptions?.bedrockModelOverrideSonnet) {
+          baseEnv.CLAUDE_CODE_BEDROCK_MODEL_SONNET = providerOptions.bedrockModelOverrideSonnet;
+        }
+        if (providerOptions?.bedrockModelOverrideOpus) {
+          baseEnv.CLAUDE_CODE_BEDROCK_MODEL_OPUS = providerOptions.bedrockModelOverrideOpus;
+        }
+
         const queryOptions: ClaudeQueryOptions = {
           ...(input.cwd ? { cwd: input.cwd } : {}),
           ...(input.model ? { model: input.model } : {}),
@@ -2159,7 +2180,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ...(resumeState?.resumeSessionAt ? { resumeSessionAt: resumeState.resumeSessionAt } : {}),
           includePartialMessages: true,
           canUseTool,
-          env: process.env,
+          env: baseEnv,
           ...(input.cwd ? { additionalDirectories: [input.cwd] } : {}),
         };
 

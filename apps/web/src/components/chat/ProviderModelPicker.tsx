@@ -81,6 +81,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>;
   compact?: boolean;
   disabled?: boolean;
+  providerLabelOverrides?: Partial<Record<ProviderKind, string>>;
   onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -156,6 +157,8 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
           <>
             {AVAILABLE_PROVIDER_OPTIONS.map((option) => {
               const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value];
+              const displayLabel =
+                props.providerLabelOverrides?.[option.value] ?? option.label;
               return (
                 <MenuSub key={option.value}>
                   <MenuSubTrigger>
@@ -163,7 +166,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
                       aria-hidden="true"
                       className="size-4 shrink-0 text-muted-foreground/85"
                     />
-                    {option.label}
+                    {displayLabel}
                   </MenuSubTrigger>
                   <MenuSubPopup className="[--available-height:min(24rem,70vh)]">
                     <MenuGroup>

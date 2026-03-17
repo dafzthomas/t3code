@@ -2300,6 +2300,10 @@ export default function ChatView({ threadId }: ChatViewProps) {
 
     setThreadError(threadIdForSend, null);
     promptRef.current = "";
+    setComposerDraftProvider(threadIdForSend, selectedProvider);
+    if (selectedModel) {
+      setComposerDraftModel(threadIdForSend, selectedModel);
+    }
     clearComposerDraftContent(threadIdForSend);
     setComposerHighlightedItemId(null);
     setComposerCursor(0);
@@ -2352,7 +2356,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
       }
       const title = truncateTitle(titleSeed);
       let threadCreateModel: ModelSlug =
-        selectedModel || (activeProject.model as ModelSlug) || DEFAULT_MODEL_BY_PROVIDER.codex;
+        selectedModel || (activeProject.model as ModelSlug) || DEFAULT_MODEL_BY_PROVIDER[selectedProvider];
 
       if (isLocalDraftThread) {
         await api.orchestration.dispatchCommand({
@@ -2782,7 +2786,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
       selectedModel ||
       (activeThread.model as ModelSlug) ||
       (activeProject.model as ModelSlug) ||
-      DEFAULT_MODEL_BY_PROVIDER.codex;
+      DEFAULT_MODEL_BY_PROVIDER[selectedProvider];
 
     sendInFlightRef.current = true;
     beginSendPhase("sending-turn");

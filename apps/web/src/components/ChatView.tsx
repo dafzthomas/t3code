@@ -3826,6 +3826,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
                           lockedProvider={lockedProvider}
                           modelOptionsByProvider={modelOptionsByProvider}
                           ultrathinkActive={isClaudeUltrathink}
+                          bedrockActive={settings.claudeUseBedrock}
                           onProviderModelChange={onProviderModelSelect}
                         />
 

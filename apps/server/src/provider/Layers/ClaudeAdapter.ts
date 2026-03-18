@@ -211,7 +211,7 @@ interface BedrockOptions {
   readonly bedrockModelOverrideOpus?: string | undefined;
 }
 
-function isBedrockActive(opts: BedrockOptions | undefined): boolean {
+function isBedrockActiveFromSettings(opts: BedrockOptions | undefined): boolean {
   if (!opts) return false;
   return Boolean(
     opts.useBedrock ||
@@ -221,6 +221,21 @@ function isBedrockActive(opts: BedrockOptions | undefined): boolean {
       opts.bedrockModelOverrideSonnet ||
       opts.bedrockModelOverrideOpus,
   );
+}
+
+function isBedrockActiveFromEnv(env: NodeJS.ProcessEnv): boolean {
+  return env.CLAUDE_CODE_USE_BEDROCK === "1";
+}
+
+function bedrockOptionsFromEnv(env: NodeJS.ProcessEnv): BedrockOptions {
+  return {
+    useBedrock: true,
+    awsRegion: env.AWS_REGION || env.AWS_DEFAULT_REGION || undefined,
+    awsProfile: env.AWS_PROFILE || undefined,
+    bedrockModelOverrideHaiku: env.ANTHROPIC_DEFAULT_HAIKU_MODEL || undefined,
+    bedrockModelOverrideSonnet: env.ANTHROPIC_DEFAULT_SONNET_MODEL || undefined,
+    bedrockModelOverrideOpus: env.ANTHROPIC_DEFAULT_OPUS_MODEL || undefined,
+  };
 }
 
 function resolveBedrockModel(
@@ -2275,12 +2290,19 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           );
 
         const providerOptions = input.providerOptions?.claudeAgent;
-        const bedrock = isBedrockActive(providerOptions);
+        const bedrockFromSettings = isBedrockActiveFromSettings(providerOptions);
+        const bedrockFromEnv = isBedrockActiveFromEnv(process.env);
+        const bedrock = bedrockFromSettings || bedrockFromEnv;
+        const effectiveBedrockOpts: BedrockOptions | undefined = bedrockFromSettings
+          ? providerOptions!
+          : bedrockFromEnv
+            ? bedrockOptionsFromEnv(process.env)
+            : undefined;
         const resolvedModelArn = bedrock
-          ? resolveBedrockModel(input.model, providerOptions!)
+          ? resolveBedrockModel(input.model, effectiveBedrockOpts!)
           : undefined;
         const sessionModel = bedrock ? resolvedModelArn : input.model;
-        const sessionEnv = bedrock
+        const sessionEnv = bedrockFromSettings
           ? buildBedrockEnv(process.env, providerOptions!, resolvedModelArn)
           : process.env;
         const requestedEffort = resolveReasoningEffortForProvider(
@@ -2372,7 +2394,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           query: queryRuntime,
           startedAt,
           basePermissionMode: permissionMode,
-          bedrockOptions: bedrock ? providerOptions : undefined,
+          bedrockOptions: effectiveBedrockOpts,
           resumeSessionId: resumeState?.resume,
           pendingApprovals,
           pendingUserInputs,

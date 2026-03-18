@@ -405,11 +405,33 @@ function SettingsRouteView() {
                 </p>
               </div>
               <div className="space-y-4">
+                {serverConfigQuery.data?.bedrockEnvironment?.detected && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Bedrock detected from environment
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Your shell has <code className="text-[10px]">CLAUDE_CODE_USE_BEDROCK=1</code>{" "}
+                      set
+                      {serverConfigQuery.data.bedrockEnvironment.awsRegion
+                        ? ` in ${serverConfigQuery.data.bedrockEnvironment.awsRegion}`
+                        : ""}
+                      . Claude Code will use your existing Bedrock configuration automatically. Use
+                      the settings below to override.
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Use AWS Bedrock</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {serverConfigQuery.data?.bedrockEnvironment?.detected
+                        ? "Override with custom settings"
+                        : "Use AWS Bedrock"}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Enable AWS Bedrock and configure region and model ARNs below.
+                      {serverConfigQuery.data?.bedrockEnvironment?.detected
+                        ? "Override the environment-detected Bedrock configuration below."
+                        : "Enable AWS Bedrock and configure region and model ARNs below."}
                     </p>
                   </div>
                   <Switch

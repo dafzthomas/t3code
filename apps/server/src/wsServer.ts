@@ -875,6 +875,26 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
           issues: keybindingsConfig.issues,
           providers: providerStatuses,
           availableEditors,
+          ...(process.env.CLAUDE_CODE_USE_BEDROCK === "1"
+            ? {
+                bedrockEnvironment: {
+                  detected: true,
+                  ...(process.env.AWS_REGION ? { awsRegion: process.env.AWS_REGION } : {}),
+                  ...(process.env.ANTHROPIC_MODEL
+                    ? { anthropicModel: process.env.ANTHROPIC_MODEL }
+                    : {}),
+                  ...(process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL
+                    ? { anthropicDefaultHaikuModel: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL }
+                    : {}),
+                  ...(process.env.ANTHROPIC_DEFAULT_SONNET_MODEL
+                    ? { anthropicDefaultSonnetModel: process.env.ANTHROPIC_DEFAULT_SONNET_MODEL }
+                    : {}),
+                  ...(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL
+                    ? { anthropicDefaultOpusModel: process.env.ANTHROPIC_DEFAULT_OPUS_MODEL }
+                    : {}),
+                },
+              }
+            : {}),
         };
 
       case WS_METHODS.serverUpsertKeybinding: {

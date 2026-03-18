@@ -2,6 +2,25 @@ import { describe, expect, it, vi } from "vitest";
 
 import { syncShellEnvironment } from "./syncShellEnvironment";
 
+const EXPECTED_ENV_KEYS = [
+  "PATH",
+  "SSH_AUTH_SOCK",
+  "AWS_REGION",
+  "AWS_DEFAULT_REGION",
+  "AWS_PROFILE",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+  "MAX_THINKING_TOKENS",
+  "ANTHROPIC_MODEL",
+  "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL",
+];
+
 describe("syncShellEnvironment", () => {
   it("hydrates PATH and missing SSH_AUTH_SOCK from the login shell on macOS", () => {
     const env: NodeJS.ProcessEnv = {
@@ -18,17 +37,7 @@ describe("syncShellEnvironment", () => {
       readEnvironment,
     });
 
-    expect(readEnvironment).toHaveBeenCalledWith("/bin/zsh", [
-      "PATH",
-      "SSH_AUTH_SOCK",
-      "AWS_REGION",
-      "AWS_DEFAULT_REGION",
-      "AWS_PROFILE",
-      "AWS_ACCESS_KEY_ID",
-      "AWS_SECRET_ACCESS_KEY",
-      "AWS_SESSION_TOKEN",
-      "CLAUDE_CODE_USE_BEDROCK",
-    ]);
+    expect(readEnvironment).toHaveBeenCalledWith("/bin/zsh", EXPECTED_ENV_KEYS);
     expect(env.PATH).toBe("/opt/homebrew/bin:/usr/bin");
     expect(env.SSH_AUTH_SOCK).toBe("/tmp/secretive.sock");
   });
@@ -135,5 +144,47 @@ describe("syncShellEnvironment", () => {
 
     expect(env.AWS_REGION).toBe("eu-west-1");
     expect(env.AWS_PROFILE).toBe("production");
+  });
+
+  it("hydrates Anthropic model env vars from the login shell", () => {
+    const env: NodeJS.ProcessEnv = {
+      SHELL: "/bin/zsh",
+      PATH: "/usr/bin",
+    };
+    const readEnvironment = vi.fn(() => ({
+      PATH: "/usr/bin",
+      CLAUDE_CODE_USE_BEDROCK: "1",
+      AWS_REGION: "eu-west-1",
+      ANTHROPIC_MODEL: "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/abc[1m]",
+      ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION: "eu-west-1",
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/haiku",
+      ANTHROPIC_DEFAULT_SONNET_MODEL: "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/sonnet[1m]",
+      ANTHROPIC_DEFAULT_OPUS_MODEL: "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/opus[1m]",
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: "4096",
+      MAX_THINKING_TOKENS: "1024",
+    }));
+
+    syncShellEnvironment(env, {
+      platform: "darwin",
+      readEnvironment,
+    });
+
+    expect(env.CLAUDE_CODE_USE_BEDROCK).toBe("1");
+    expect(env.AWS_REGION).toBe("eu-west-1");
+    expect(env.ANTHROPIC_MODEL).toBe(
+      "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/abc[1m]",
+    );
+    expect(env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION).toBe("eu-west-1");
+    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe(
+      "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/haiku",
+    );
+    expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe(
+      "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/sonnet[1m]",
+    );
+    expect(env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe(
+      "arn:aws:bedrock:eu-west-1:123456:application-inference-profile/opus[1m]",
+    );
+    expect(env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("4096");
+    expect(env.MAX_THINKING_TOKENS).toBe("1024");
   });
 });

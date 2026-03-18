@@ -45,6 +45,16 @@ export type ServerProviderStatus = typeof ServerProviderStatus.Type;
 
 const ServerProviderStatuses = Schema.Array(ServerProviderStatus);
 
+export const BedrockEnvironment = Schema.Struct({
+  detected: Schema.Boolean,
+  awsRegion: Schema.optional(TrimmedNonEmptyString),
+  anthropicModel: Schema.optional(TrimmedNonEmptyString),
+  anthropicDefaultHaikuModel: Schema.optional(TrimmedNonEmptyString),
+  anthropicDefaultSonnetModel: Schema.optional(TrimmedNonEmptyString),
+  anthropicDefaultOpusModel: Schema.optional(TrimmedNonEmptyString),
+});
+export type BedrockEnvironment = typeof BedrockEnvironment.Type;
+
 export const ServerConfig = Schema.Struct({
   cwd: TrimmedNonEmptyString,
   keybindingsConfigPath: TrimmedNonEmptyString,
@@ -52,6 +62,7 @@ export const ServerConfig = Schema.Struct({
   issues: ServerConfigIssues,
   providers: ServerProviderStatuses,
   availableEditors: Schema.Array(EditorId),
+  bedrockEnvironment: Schema.optional(BedrockEnvironment),
 });
 export type ServerConfig = typeof ServerConfig.Type;
 

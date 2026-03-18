@@ -42,7 +42,7 @@ export const ProviderSandboxMode = Schema.Literals([
   "danger-full-access",
 ]);
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
-export const DEFAULT_PROVIDER_KIND: ProviderKind = "codex";
+export const DEFAULT_PROVIDER_KIND: ProviderKind = "claudeAgent";
 
 export const CodexProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),

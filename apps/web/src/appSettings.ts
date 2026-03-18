@@ -39,6 +39,9 @@ const AppSettingsSchema = Schema.Struct({
     Schema.withConstructorDefault(() => Option.some([])),
   ),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
+  enableCodexProvider: Schema.Boolean.pipe(
+    Schema.withConstructorDefault(() => Option.some(false)),
+  ),
   claudeUseBedrock: Schema.Boolean.pipe(
     Schema.withConstructorDefault(() => Option.some(false)),
   ),

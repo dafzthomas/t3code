@@ -86,6 +86,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   model: ModelSlug;
   lockedProvider: ProviderKind | null;
   modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>;
+  availableProviders?: ReadonlyArray<{ value: ProviderKind; label: string; available: true }>;
   ultrathinkActive?: boolean;
   bedrockActive?: boolean;
   compact?: boolean;
@@ -93,6 +94,13 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const availableProviderOptions = props.availableProviders ?? AVAILABLE_PROVIDER_OPTIONS;
+  const unavailableProviderOptions = props.availableProviders
+    ? PROVIDER_OPTIONS.filter(
+        (option) =>
+          option.available && !props.availableProviders!.some((p) => p.value === option.value),
+      )
+    : UNAVAILABLE_PROVIDER_OPTIONS;
   const activeProvider = props.lockedProvider ?? props.provider;
   const selectedProviderOptions = props.modelOptionsByProvider[activeProvider];
   const selectedModelLabel =
@@ -177,7 +185,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
           </MenuGroup>
         ) : (
           <>
-            {AVAILABLE_PROVIDER_OPTIONS.map((option) => {
+            {availableProviderOptions.map((option) => {
               const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value];
               return (
                 <MenuSub key={option.value}>
@@ -212,8 +220,8 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
                 </MenuSub>
               );
             })}
-            {UNAVAILABLE_PROVIDER_OPTIONS.length > 0 && <MenuDivider />}
-            {UNAVAILABLE_PROVIDER_OPTIONS.map((option) => {
+            {unavailableProviderOptions.length > 0 && <MenuDivider />}
+            {unavailableProviderOptions.map((option) => {
               const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value];
               return (
                 <MenuItem key={option.value} disabled>
@@ -228,7 +236,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
                 </MenuItem>
               );
             })}
-            {UNAVAILABLE_PROVIDER_OPTIONS.length === 0 && <MenuDivider />}
+            {unavailableProviderOptions.length === 0 && <MenuDivider />}
             {COMING_SOON_PROVIDER_OPTIONS.map((option) => {
               const OptionIcon = option.icon;
               return (

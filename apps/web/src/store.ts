@@ -139,7 +139,7 @@ function mapProjectsFromReadModel(
       cwd: project.workspaceRoot,
       model:
         existing?.model ??
-        resolveModelSlug(project.defaultModel ?? DEFAULT_MODEL_BY_PROVIDER.codex),
+        resolveModelSlug(project.defaultModel ?? DEFAULT_MODEL_BY_PROVIDER.claudeAgent),
       expanded:
         existing?.expanded ??
         (persistedExpandedProjectCwds.size > 0

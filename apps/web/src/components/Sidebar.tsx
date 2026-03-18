@@ -432,7 +432,7 @@ export default function Sidebar() {
           projectId,
           title,
           workspaceRoot: cwd,
-          defaultModel: DEFAULT_MODEL_BY_PROVIDER.codex,
+          defaultModel: DEFAULT_MODEL_BY_PROVIDER.claudeAgent,
           createdAt,
         });
         await handleNewThread(projectId, {

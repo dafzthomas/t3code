@@ -618,7 +618,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
 
   const stagePackageJson: StagePackageJson = {
-    name: "t3-code-desktop",
+    name: "haven-code-desktop",
     version: appVersion,
     buildVersion: appVersion,
     t3codeCommitHash: commitHash,
@@ -629,7 +629,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     build: yield* createBuildConfig(
       options.platform,
       options.target,
-      desktopPackageJson.productName ?? "T3 Code",
+      desktopPackageJson.productName ?? "Haven Code",
       options.signed,
     ),
     dependencies: {

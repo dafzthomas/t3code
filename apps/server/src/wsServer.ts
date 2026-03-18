@@ -101,7 +101,7 @@ export interface ServerShape {
 /**
  * Server - Service tag for HTTP/WebSocket lifecycle management.
  */
-export class Server extends ServiceMap.Service<Server, ServerShape>()("t3/wsServer/Server") {}
+export class Server extends ServiceMap.Service<Server, ServerShape>()("haven-code/wsServer/Server") {}
 
 const isServerNotRunningError = (error: Error): boolean => {
   const maybeCode = (error as NodeJS.ErrnoException).code;

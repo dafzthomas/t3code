@@ -11,7 +11,7 @@ import {
 } from "../lib/terminalContext";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "t3code:last-invoked-script-by-project";
-const WORKTREE_BRANCH_PREFIX = "t3code";
+const WORKTREE_BRANCH_PREFIX = "havenCode";
 
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
 

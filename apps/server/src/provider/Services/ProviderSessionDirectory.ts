@@ -54,4 +54,4 @@ export interface ProviderSessionDirectoryShape {
 export class ProviderSessionDirectory extends ServiceMap.Service<
   ProviderSessionDirectory,
   ProviderSessionDirectoryShape
->()("t3/provider/Services/ProviderSessionDirectory") {}
+>()("haven-code/provider/Services/ProviderSessionDirectory") {}

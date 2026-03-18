@@ -1,14 +1,14 @@
-# T3 Code
+# Haven Code
 
-T3 Code is a minimal web GUI for coding agents (currently Codex and Claude, more coming soon).
+Haven Code is a minimal web GUI for coding agents (currently Codex and Claude, more coming soon).
 
 ## How to use
 
 > [!WARNING]
-> You need to have [Codex CLI](https://github.com/openai/codex) installed and authorized for T3 Code to work.
+> You need to have [Codex CLI](https://github.com/openai/codex) installed and authorized for Haven Code to work.
 
 ```bash
-npx t3
+npx haven-code
 ```
 
 You can also just install the desktop app. It's cooler.

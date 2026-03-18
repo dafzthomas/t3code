@@ -68,7 +68,7 @@ export interface CliConfigShape {
  * CliConfig - Service tag for startup CLI/runtime helpers.
  */
 export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
-  "t3/main/CliConfig",
+  "haven-code/main/CliConfig",
 ) {
   static readonly layer = Layer.effect(
     CliConfig,
@@ -331,7 +331,7 @@ const logWebSocketEventsFlag = Flag.boolean("log-websocket-events").pipe(
   Flag.optional,
 );
 
-export const t3Cli = Command.make("t3", {
+export const havenCodeCli = Command.make("haven-code", {
   mode: modeFlag,
   port: portFlag,
   host: hostFlag,

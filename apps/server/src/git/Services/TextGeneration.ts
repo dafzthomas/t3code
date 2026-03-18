@@ -96,5 +96,5 @@ export interface TextGenerationShape {
  * TextGeneration - Service tag for commit and PR text generation.
  */
 export class TextGeneration extends ServiceMap.Service<TextGeneration, TextGenerationShape>()(
-  "t3/git/Services/TextGeneration",
+  "haven-code/git/Services/TextGeneration",
 ) {}

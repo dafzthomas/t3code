@@ -56,6 +56,9 @@ const PROVIDER = "claudeAgent" as const;
  * When Bedrock is enabled, resolve a friendly model slug (e.g. "claude-sonnet-4-6")
  * to the Bedrock model override ARN/ID — or `undefined` to let the CLI use its
  * built-in defaults.  Passing the friendly slug directly causes a 400 from Bedrock.
+ *
+ * Only rewrites known friendly slugs (containing "haiku", "sonnet", or "opus").
+ * Custom model IDs (e.g. inference-profile ARNs) are passed through unchanged.
  */
 function resolveBedrockModel(
   model: string | undefined,
@@ -73,8 +76,11 @@ function resolveBedrockModel(
   if (slug.includes("opus")) {
     return env.CLAUDE_CODE_BEDROCK_MODEL_OPUS || undefined;
   }
-  // Default to sonnet tier (covers "sonnet" and any unrecognised slug).
-  return env.CLAUDE_CODE_BEDROCK_MODEL_SONNET || undefined;
+  if (slug.includes("sonnet")) {
+    return env.CLAUDE_CODE_BEDROCK_MODEL_SONNET || undefined;
+  }
+  // Not a known friendly slug — pass through as-is (e.g. ARN or custom model ID).
+  return model;
 }
 
 type ClaudeTextStreamKind = Extract<RuntimeContentStreamKind, "assistant_text" | "reasoning_text">;
@@ -145,6 +151,7 @@ interface ClaudeSessionContext {
   readonly query: ClaudeQueryRuntime;
   readonly startedAt: string;
   readonly basePermissionMode: PermissionMode | undefined;
+  readonly sessionEnv: Record<string, string | undefined>;
   resumeSessionId: string | undefined;
   readonly pendingApprovals: Map<ApprovalRequestId, PendingApproval>;
   readonly pendingUserInputs: Map<ApprovalRequestId, PendingUserInput>;
@@ -2253,6 +2260,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           query: queryRuntime,
           startedAt,
           basePermissionMode: permissionMode,
+          sessionEnv: baseEnv,
           resumeSessionId: resumeState?.resume,
           pendingApprovals,
           pendingUserInputs,
@@ -2330,7 +2338,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         if (input.model) {
-          const turnModel = resolveBedrockModel(input.model, process.env);
+          const turnModel = resolveBedrockModel(input.model, context.sessionEnv);
           if (turnModel) {
             yield* Effect.tryPromise({
               try: () => context.query.setModel(turnModel),

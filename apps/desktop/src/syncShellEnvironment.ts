@@ -1,5 +1,22 @@
 import { readEnvironmentFromLoginShell, ShellEnvironmentReader } from "@t3tools/shared/shell";
 
+const CLAUDE_BEDROCK_ENV_VARS = [
+  "AWS_REGION",
+  "AWS_DEFAULT_REGION",
+  "AWS_PROFILE",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+  "MAX_THINKING_TOKENS",
+  "ANTHROPIC_MODEL",
+  "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL",
+] as const;
+
 export function syncShellEnvironment(
   env: NodeJS.ProcessEnv = process.env,
   options: {
@@ -14,6 +31,7 @@ export function syncShellEnvironment(
     const shellEnvironment = (options.readEnvironment ?? readEnvironmentFromLoginShell)(shell, [
       "PATH",
       "SSH_AUTH_SOCK",
+      ...CLAUDE_BEDROCK_ENV_VARS,
     ]);
 
     if (shellEnvironment.PATH) {
@@ -22,6 +40,12 @@ export function syncShellEnvironment(
 
     if (!env.SSH_AUTH_SOCK && shellEnvironment.SSH_AUTH_SOCK) {
       env.SSH_AUTH_SOCK = shellEnvironment.SSH_AUTH_SOCK;
+    }
+
+    for (const key of CLAUDE_BEDROCK_ENV_VARS) {
+      if (!env[key] && shellEnvironment[key]) {
+        env[key] = shellEnvironment[key];
+      }
     }
   } catch {
     // Keep inherited environment if shell lookup fails.

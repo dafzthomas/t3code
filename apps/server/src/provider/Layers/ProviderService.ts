@@ -88,15 +88,27 @@ function toRuntimeStatus(session: ProviderSession): "starting" | "running" | "st
 
 function toRuntimePayloadFromSession(
   session: ProviderSession,
-  extra?: { readonly providerOptions?: unknown },
+  extra?: { readonly modelOptions?: unknown; readonly providerOptions?: unknown },
 ): Record<string, unknown> {
   return {
     cwd: session.cwd ?? null,
     model: session.model ?? null,
     activeTurnId: session.activeTurnId ?? null,
     lastError: session.lastError ?? null,
+    ...(extra?.modelOptions !== undefined ? { modelOptions: extra.modelOptions } : {}),
     ...(extra?.providerOptions !== undefined ? { providerOptions: extra.providerOptions } : {}),
   };
+}
+
+function readPersistedModelOptions(
+  runtimePayload: ProviderRuntimeBinding["runtimePayload"],
+): Record<string, unknown> | undefined {
+  if (!runtimePayload || typeof runtimePayload !== "object" || Array.isArray(runtimePayload)) {
+    return undefined;
+  }
+  const raw = "modelOptions" in runtimePayload ? runtimePayload.modelOptions : undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  return raw as Record<string, unknown>;
 }
 
 function readPersistedProviderOptions(
@@ -150,7 +162,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const upsertSessionBinding = (
       session: ProviderSession,
       threadId: ThreadId,
-      extra?: { readonly providerOptions?: unknown },
+      extra?: { readonly modelOptions?: unknown; readonly providerOptions?: unknown },
     ) =>
       directory.upsert({
         threadId,
@@ -213,12 +225,14 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         }
 
         const persistedCwd = readPersistedCwd(input.binding.runtimePayload);
+        const persistedModelOptions = readPersistedModelOptions(input.binding.runtimePayload);
         const persistedProviderOptions = readPersistedProviderOptions(input.binding.runtimePayload);
 
         const resumed = yield* adapter.startSession({
           threadId: input.binding.threadId,
           provider: input.binding.provider,
           ...(persistedCwd ? { cwd: persistedCwd } : {}),
+          ...(persistedModelOptions ? { modelOptions: persistedModelOptions } : {}),
           ...(persistedProviderOptions ? { providerOptions: persistedProviderOptions } : {}),
           ...(hasResumeCursor ? { resumeCursor: input.binding.resumeCursor } : {}),
           runtimeMode: input.binding.runtimeMode ?? "full-access",
@@ -292,6 +306,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         }
 
         yield* upsertSessionBinding(session, threadId, {
+          modelOptions: input.modelOptions,
           providerOptions: input.providerOptions,
         });
         yield* analytics.record("provider.session.started", {

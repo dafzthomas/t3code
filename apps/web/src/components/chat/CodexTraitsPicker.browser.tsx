@@ -13,26 +13,28 @@ async function mountPicker(props: {
   fastModeEnabled: boolean;
 }) {
   const threadId = ThreadId.makeUnsafe("thread-codex-traits");
-  useComposerDraftStore.setState({
-    draftsByThreadId: {
-      [threadId]: {
-        prompt: "",
-        images: [],
-        nonPersistedImageIds: [],
-        persistedAttachments: [],
-        terminalContexts: [],
-        provider: "codex",
-        model: null,
-        modelOptions: {
-          codex: {
-            ...(props.reasoningEffort ? { reasoningEffort: props.reasoningEffort } : {}),
-            ...(props.fastModeEnabled ? { fastMode: true } : {}),
-          },
-        },
-        runtimeMode: null,
-        interactionMode: null,
+  const draftsByThreadId = {} as ReturnType<
+    typeof useComposerDraftStore.getState
+  >["draftsByThreadId"];
+  draftsByThreadId[threadId] = {
+    prompt: "",
+    images: [],
+    nonPersistedImageIds: [],
+    persistedAttachments: [],
+    terminalContexts: [],
+    provider: "codex",
+    model: null,
+    modelOptions: {
+      codex: {
+        ...(props.reasoningEffort ? { reasoningEffort: props.reasoningEffort } : {}),
+        ...(props.fastModeEnabled ? { fastMode: true } : {}),
       },
     },
+    runtimeMode: null,
+    interactionMode: null,
+  };
+  useComposerDraftStore.setState({
+    draftsByThreadId,
     draftThreadsByThreadId: {},
     projectDraftThreadIdByProjectId: {
       [ProjectId.makeUnsafe("project-codex-traits")]: threadId,

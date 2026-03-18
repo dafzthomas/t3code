@@ -1,4 +1,4 @@
-import { ThreadId } from "@t3tools/contracts";
+import { type ProviderModelOptions, ThreadId } from "@t3tools/contracts";
 import "../../index.css";
 
 import { page } from "vitest/browser";
@@ -14,47 +14,27 @@ async function mountMenu(props?: {
   model?: string;
   prompt?: string;
   provider?: "codex" | "claudeAgent";
-  codexEffort?: "low" | "medium" | "high" | "xhigh";
-  codexFastMode?: boolean;
-  claudeEffort?: "low" | "medium" | "high" | "max" | "ultrathink";
-  claudeThinking?: boolean;
-  claudeFastMode?: boolean;
+  modelOptions?: ProviderModelOptions | null;
 }) {
   const threadId = ThreadId.makeUnsafe("thread-compact-menu");
   const provider = props?.provider ?? "claudeAgent";
+  const draftsByThreadId = {} as ReturnType<
+    typeof useComposerDraftStore.getState
+  >["draftsByThreadId"];
+  draftsByThreadId[threadId] = {
+    prompt: props?.prompt ?? "",
+    images: [],
+    nonPersistedImageIds: [],
+    persistedAttachments: [],
+    terminalContexts: [],
+    provider,
+    model: props?.model ?? "claude-opus-4-6",
+    modelOptions: props?.modelOptions ?? null,
+    runtimeMode: null,
+    interactionMode: null,
+  };
   useComposerDraftStore.setState({
-    draftsByThreadId: {
-      [threadId]: {
-        prompt: props?.prompt ?? "",
-        images: [],
-        nonPersistedImageIds: [],
-        persistedAttachments: [],
-        terminalContexts: [],
-        provider,
-        model: props?.model ?? "claude-opus-4-6",
-        modelOptions: {
-          ...(provider === "codex"
-            ? {
-                codex: {
-                  ...(props?.codexEffort ? { reasoningEffort: props.codexEffort } : {}),
-                  ...(props?.codexFastMode ? { fastMode: true } : {}),
-                },
-              }
-            : {}),
-          ...(provider === "claudeAgent"
-            ? {
-                claudeAgent: {
-                  ...(props?.claudeEffort ? { effort: props.claudeEffort } : {}),
-                  ...(props?.claudeThinking === false ? { thinking: false } : {}),
-                  ...(props?.claudeFastMode ? { fastMode: true } : {}),
-                },
-              }
-            : {}),
-        },
-        runtimeMode: null,
-        interactionMode: null,
-      },
-    },
+    draftsByThreadId,
     draftThreadsByThreadId: {},
     projectDraftThreadIdByProjectId: {},
   });
@@ -158,7 +138,11 @@ describe("CompactComposerControlsMenu", () => {
   it("shows a Claude thinking on/off section for Haiku", async () => {
     const mounted = await mountMenu({
       model: "claude-haiku-4-5",
-      claudeThinking: true,
+      modelOptions: {
+        claudeAgent: {
+          thinking: true,
+        },
+      },
     });
 
     try {
@@ -179,7 +163,11 @@ describe("CompactComposerControlsMenu", () => {
     const mounted = await mountMenu({
       model: "claude-opus-4-6",
       prompt: "Ultrathink:\nInvestigate this",
-      claudeEffort: "high",
+      modelOptions: {
+        claudeAgent: {
+          effort: "high",
+        },
+      },
     });
 
     try {

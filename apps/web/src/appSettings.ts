@@ -39,6 +39,24 @@ const AppSettingsSchema = Schema.Struct({
     Schema.withConstructorDefault(() => Option.some([])),
   ),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
+  claudeUseBedrock: Schema.Boolean.pipe(
+    Schema.withConstructorDefault(() => Option.some(false)),
+  ),
+  claudeAwsRegion: Schema.String.check(Schema.isMaxLength(256)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeAwsProfile: Schema.String.check(Schema.isMaxLength(256)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeBedrockArnHaiku: Schema.String.check(Schema.isMaxLength(1024)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeBedrockArnSonnet: Schema.String.check(Schema.isMaxLength(1024)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeBedrockArnOpus: Schema.String.check(Schema.isMaxLength(1024)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
 });
 export type AppSettings = typeof AppSettingsSchema.Type;
 export interface AppModelOption {

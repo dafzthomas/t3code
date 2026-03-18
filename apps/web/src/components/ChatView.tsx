@@ -661,16 +661,50 @@ export default function ChatView({ threadId }: ChatViewProps) {
     return undefined;
   }, [draftModelOptions, selectedModel, selectedProvider]);
   const providerOptionsForDispatch = useMemo(() => {
-    if (!settings.codexBinaryPath && !settings.codexHomePath) {
-      return undefined;
-    }
+    const codex =
+      settings.codexBinaryPath || settings.codexHomePath
+        ? {
+            ...(settings.codexBinaryPath ? { binaryPath: settings.codexBinaryPath } : {}),
+            ...(settings.codexHomePath ? { homePath: settings.codexHomePath } : {}),
+          }
+        : undefined;
+    const claudeAgent =
+      settings.claudeUseBedrock ||
+      settings.claudeAwsRegion ||
+      settings.claudeAwsProfile ||
+      settings.claudeBedrockArnHaiku ||
+      settings.claudeBedrockArnSonnet ||
+      settings.claudeBedrockArnOpus
+        ? {
+            ...(settings.claudeUseBedrock ? { useBedrock: true } : {}),
+            ...(settings.claudeAwsRegion ? { awsRegion: settings.claudeAwsRegion } : {}),
+            ...(settings.claudeAwsProfile ? { awsProfile: settings.claudeAwsProfile } : {}),
+            ...(settings.claudeBedrockArnHaiku
+              ? { bedrockModelOverrideHaiku: settings.claudeBedrockArnHaiku }
+              : {}),
+            ...(settings.claudeBedrockArnSonnet
+              ? { bedrockModelOverrideSonnet: settings.claudeBedrockArnSonnet }
+              : {}),
+            ...(settings.claudeBedrockArnOpus
+              ? { bedrockModelOverrideOpus: settings.claudeBedrockArnOpus }
+              : {}),
+          }
+        : undefined;
+    if (!codex && !claudeAgent) return undefined;
     return {
-      codex: {
-        ...(settings.codexBinaryPath ? { binaryPath: settings.codexBinaryPath } : {}),
-        ...(settings.codexHomePath ? { homePath: settings.codexHomePath } : {}),
-      },
+      ...(codex ? { codex } : {}),
+      ...(claudeAgent ? { claudeAgent } : {}),
     };
-  }, [settings.codexBinaryPath, settings.codexHomePath]);
+  }, [
+    settings.codexBinaryPath,
+    settings.codexHomePath,
+    settings.claudeUseBedrock,
+    settings.claudeAwsRegion,
+    settings.claudeAwsProfile,
+    settings.claudeBedrockArnHaiku,
+    settings.claudeBedrockArnSonnet,
+    settings.claudeBedrockArnOpus,
+  ]);
   const selectedModelForPicker = selectedModel;
   const modelOptionsByProvider = useMemo(
     () => getCustomModelOptionsByProvider(settings),

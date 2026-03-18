@@ -53,6 +53,12 @@ export const ClaudeProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   permissionMode: Schema.optional(TrimmedNonEmptyString),
   maxThinkingTokens: Schema.optional(NonNegativeInt),
+  useBedrock: Schema.optional(Schema.Boolean),
+  awsRegion: Schema.optional(TrimmedNonEmptyString),
+  awsProfile: Schema.optional(TrimmedNonEmptyString),
+  bedrockModelOverrideHaiku: Schema.optional(TrimmedNonEmptyString),
+  bedrockModelOverrideSonnet: Schema.optional(TrimmedNonEmptyString),
+  bedrockModelOverrideOpus: Schema.optional(TrimmedNonEmptyString),
 });
 
 export const ProviderStartOptions = Schema.Struct({

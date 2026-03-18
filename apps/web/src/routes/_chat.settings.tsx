@@ -396,6 +396,135 @@ function SettingsRouteView() {
 
             <section className="rounded-2xl border border-border bg-card p-5">
               <div className="mb-4">
+                <h2 className="text-sm font-medium text-foreground">
+                  Claude Code &mdash; AWS Bedrock
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use Claude Code with AWS Bedrock as the AI provider. Configure region and model
+                  ARNs for your Bedrock deployment.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Use AWS Bedrock</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Enable AWS Bedrock and configure region and model ARNs below.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.claudeUseBedrock}
+                    onCheckedChange={(checked) =>
+                      updateSettings({ claudeUseBedrock: Boolean(checked) })
+                    }
+                    aria-label="Use AWS Bedrock for Claude Code"
+                  />
+                </div>
+                {settings.claudeUseBedrock && (
+                  <div className="space-y-3 border-t border-border/50 pt-3">
+                    <div>
+                      <span className="text-xs font-medium text-foreground">AWS Region</span>
+                      <p className="mb-1.5 text-[11px] text-muted-foreground">
+                        The AWS region where your Bedrock models are available.
+                      </p>
+                      <Input
+                        className="h-8 text-xs"
+                        placeholder="us-east-1"
+                        value={settings.claudeAwsRegion}
+                        onChange={(event) =>
+                          updateSettings({ claudeAwsRegion: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-foreground">AWS Profile</span>
+                      <p className="mb-1.5 text-[11px] text-muted-foreground">
+                        Optional named AWS CLI profile for authentication.
+                      </p>
+                      <Input
+                        className="h-8 text-xs"
+                        placeholder="default"
+                        value={settings.claudeAwsProfile}
+                        onChange={(event) =>
+                          updateSettings({ claudeAwsProfile: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-foreground">
+                        Model ARN overrides
+                      </span>
+                      <p className="mb-1.5 text-[11px] text-muted-foreground">
+                        Override the default Bedrock model IDs with specific inference profile ARNs.
+                      </p>
+                      <div className="space-y-2">
+                        {(
+                          [
+                            {
+                              id: "claude-bedrock-arn-haiku",
+                              label: "Haiku",
+                              settingKey: "claudeBedrockArnHaiku",
+                              placeholder:
+                                "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-...",
+                            },
+                            {
+                              id: "claude-bedrock-arn-sonnet",
+                              label: "Sonnet",
+                              settingKey: "claudeBedrockArnSonnet",
+                              placeholder:
+                                "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-...",
+                            },
+                            {
+                              id: "claude-bedrock-arn-opus",
+                              label: "Opus",
+                              settingKey: "claudeBedrockArnOpus",
+                              placeholder:
+                                "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-opus-...",
+                            },
+                          ] as const
+                        ).map((entry) => (
+                          <div key={entry.id}>
+                            <label htmlFor={entry.id} className="text-[11px] text-muted-foreground">
+                              {entry.label}
+                            </label>
+                            <Input
+                              id={entry.id}
+                              className="h-8 text-xs"
+                              placeholder={entry.placeholder}
+                              value={settings[entry.settingKey]}
+                              onChange={(event) =>
+                                updateSettings({ [entry.settingKey]: event.target.value })
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          updateSettings({
+                            claudeUseBedrock: defaults.claudeUseBedrock,
+                            claudeAwsRegion: defaults.claudeAwsRegion,
+                            claudeAwsProfile: defaults.claudeAwsProfile,
+                            claudeBedrockArnHaiku: defaults.claudeBedrockArnHaiku,
+                            claudeBedrockArnSonnet: defaults.claudeBedrockArnSonnet,
+                            claudeBedrockArnOpus: defaults.claudeBedrockArnOpus,
+                          })
+                        }
+                      >
+                        Reset Bedrock settings
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-5">
+              <div className="mb-4">
                 <h2 className="text-sm font-medium text-foreground">Models</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Save additional provider model slugs so they appear in the chat model picker and

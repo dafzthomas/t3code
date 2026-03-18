@@ -89,6 +89,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   const selectedProviderOptions = props.modelOptionsByProvider[activeProvider];
   const selectedModelLabel =
     selectedProviderOptions.find((option) => option.slug === props.model)?.name ?? props.model;
+  const providerLabelOverride = props.providerLabelOverrides?.[activeProvider];
   const ProviderIcon = PROVIDER_ICON_BY_PROVIDER[activeProvider];
   const handleModelChange = (provider: ProviderKind, value: string) => {
     if (props.disabled) return;
@@ -132,6 +133,11 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
         >
           <ProviderIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground/70" />
           <span className="truncate">{selectedModelLabel}</span>
+          {providerLabelOverride && (
+            <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] font-medium uppercase leading-none tracking-wider text-muted-foreground">
+              Bedrock
+            </span>
+          )}
           <ChevronDownIcon aria-hidden="true" className="size-3 opacity-60" />
         </span>
       </MenuTrigger>

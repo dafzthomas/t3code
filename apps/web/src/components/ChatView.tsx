@@ -1050,6 +1050,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
   const availableEditors = serverConfigQuery.data?.availableEditors ?? EMPTY_AVAILABLE_EDITORS;
   const providerStatuses = serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES;
+  const bedrockShellDefaults = serverConfigQuery.data?.bedrockShellDefaults;
   const activeProvider = activeThread?.session?.provider ?? "codex";
   const activeProviderStatus = useMemo(
     () => providerStatuses.find((status) => status.provider === activeProvider) ?? null,
@@ -3566,7 +3567,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
                         model={selectedModelForPickerWithCustomFallback}
                         lockedProvider={lockedProvider}
                         modelOptionsByProvider={modelOptionsByProvider}
-                        {...(settings.claudeAgentUseBedrock
+                        {...((settings.claudeAgentUseBedrock || bedrockShellDefaults?.useBedrock)
                           ? { providerLabelOverrides: { claudeAgent: "Claude Bedrock" } }
                           : {})}
                         onProviderModelChange={onProviderModelSelect}

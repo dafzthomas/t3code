@@ -51,6 +51,32 @@ import { ClaudeAdapter, type ClaudeAdapterShape } from "../Services/ClaudeAdapte
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "claudeAgent" as const;
+
+/**
+ * When Bedrock is enabled, resolve a friendly model slug (e.g. "claude-sonnet-4-6")
+ * to the Bedrock model override ARN/ID — or `undefined` to let the CLI use its
+ * built-in defaults.  Passing the friendly slug directly causes a 400 from Bedrock.
+ */
+function resolveBedrockModel(
+  model: string | undefined,
+  env: Record<string, string | undefined>,
+): string | undefined {
+  if (!model) return model;
+  const isBedrock =
+    env.CLAUDE_CODE_USE_BEDROCK === "1" || env.CLAUDE_CODE_USE_BEDROCK === "true";
+  if (!isBedrock) return model;
+
+  const slug = model.toLowerCase();
+  if (slug.includes("haiku")) {
+    return env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU || undefined;
+  }
+  if (slug.includes("opus")) {
+    return env.CLAUDE_CODE_BEDROCK_MODEL_OPUS || undefined;
+  }
+  // Default to sonnet tier (covers "sonnet" and any unrecognised slug).
+  return env.CLAUDE_CODE_BEDROCK_MODEL_SONNET || undefined;
+}
+
 type ClaudeTextStreamKind = Extract<RuntimeContentStreamKind, "assistant_text" | "reasoning_text">;
 type ClaudeToolResultStreamKind = Extract<
   RuntimeContentStreamKind,
@@ -2163,9 +2189,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           baseEnv.CLAUDE_CODE_BEDROCK_MODEL_OPUS = providerOptions.bedrockModelOverrideOpus;
         }
 
+        const resolvedModel = resolveBedrockModel(input.model, baseEnv);
+
         const queryOptions: ClaudeQueryOptions = {
           ...(input.cwd ? { cwd: input.cwd } : {}),
-          ...(input.model ? { model: input.model } : {}),
+          ...(resolvedModel ? { model: resolvedModel } : {}),
           ...(providerOptions?.binaryPath
             ? { pathToClaudeCodeExecutable: providerOptions.binaryPath }
             : {}),
@@ -2302,10 +2330,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         if (input.model) {
-          yield* Effect.tryPromise({
-            try: () => context.query.setModel(input.model),
-            catch: (cause) => toRequestError(input.threadId, "turn/setModel", cause),
-          });
+          const turnModel = resolveBedrockModel(input.model, process.env);
+          if (turnModel) {
+            yield* Effect.tryPromise({
+              try: () => context.query.setModel(turnModel),
+              catch: (cause) => toRequestError(input.threadId, "turn/setModel", cause),
+            });
+          }
         }
 
         // Apply interaction mode by switching the SDK's permission mode.

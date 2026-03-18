@@ -125,6 +125,7 @@ function SettingsRouteView() {
   const codexHomePath = settings.codexHomePath;
   const keybindingsConfigPath = serverConfigQuery.data?.keybindingsConfigPath ?? null;
   const availableEditors = serverConfigQuery.data?.availableEditors;
+  const bedrockShellDefaults = serverConfigQuery.data?.bedrockShellDefaults;
 
   const openKeybindingsFile = useCallback(() => {
     if (!keybindingsConfigPath) return;
@@ -401,7 +402,7 @@ function SettingsRouteView() {
                     </p>
                   </div>
                   <Switch
-                    checked={settings.claudeAgentUseBedrock}
+                    checked={settings.claudeAgentUseBedrock || Boolean(bedrockShellDefaults?.useBedrock)}
                     onCheckedChange={(checked) =>
                       updateSettings({ claudeAgentUseBedrock: Boolean(checked) })
                     }
@@ -409,7 +410,13 @@ function SettingsRouteView() {
                   />
                 </div>
 
-                {settings.claudeAgentUseBedrock ? (
+                {bedrockShellDefaults?.useBedrock && !settings.claudeAgentUseBedrock ? (
+                  <p className="text-xs text-muted-foreground">
+                    Enabled via <code>CLAUDE_CODE_USE_BEDROCK</code> in your shell environment.
+                  </p>
+                ) : null}
+
+                {(settings.claudeAgentUseBedrock || bedrockShellDefaults?.useBedrock) ? (
                   <div className="space-y-4 rounded-xl border border-border bg-background/50 p-4">
                     <label htmlFor="claude-aws-region" className="block space-y-1">
                       <span className="text-xs font-medium text-foreground">AWS Region</span>
@@ -419,12 +426,14 @@ function SettingsRouteView() {
                         onChange={(event) =>
                           updateSettings({ claudeAgentAwsRegion: event.target.value })
                         }
-                        placeholder="us-east-1"
+                        placeholder={bedrockShellDefaults?.awsRegion || "us-east-1"}
                         spellCheck={false}
                       />
                       <span className="text-xs text-muted-foreground">
-                        The AWS region for Bedrock API calls. Leave blank to use the default from
-                        your AWS config.
+                        The AWS region for Bedrock API calls.{" "}
+                        {bedrockShellDefaults?.awsRegion
+                          ? `Leave blank to use "${bedrockShellDefaults.awsRegion}" from your shell.`
+                          : "Leave blank to use the default from your AWS config."}
                       </span>
                     </label>
 
@@ -436,12 +445,14 @@ function SettingsRouteView() {
                         onChange={(event) =>
                           updateSettings({ claudeAgentAwsProfile: event.target.value })
                         }
-                        placeholder="default"
+                        placeholder={bedrockShellDefaults?.awsProfile || "default"}
                         spellCheck={false}
                       />
                       <span className="text-xs text-muted-foreground">
-                        Named AWS CLI profile to use for credentials. Leave blank for the default
-                        profile.
+                        Named AWS CLI profile to use for credentials.{" "}
+                        {bedrockShellDefaults?.awsProfile
+                          ? `Leave blank to use "${bedrockShellDefaults.awsProfile}" from your shell.`
+                          : "Leave blank for the default profile."}
                       </span>
                     </label>
 
@@ -455,7 +466,7 @@ function SettingsRouteView() {
                         onChange={(event) =>
                           updateSettings({ claudeAgentBedrockArnHaiku: event.target.value })
                         }
-                        placeholder="arn:aws:bedrock:…"
+                        placeholder={bedrockShellDefaults?.bedrockModelOverrideHaiku || "arn:aws:bedrock:…"}
                         spellCheck={false}
                       />
                       <span className="text-xs text-muted-foreground">
@@ -473,7 +484,7 @@ function SettingsRouteView() {
                         onChange={(event) =>
                           updateSettings({ claudeAgentBedrockArnSonnet: event.target.value })
                         }
-                        placeholder="arn:aws:bedrock:…"
+                        placeholder={bedrockShellDefaults?.bedrockModelOverrideSonnet || "arn:aws:bedrock:…"}
                         spellCheck={false}
                       />
                       <span className="text-xs text-muted-foreground">
@@ -491,7 +502,7 @@ function SettingsRouteView() {
                         onChange={(event) =>
                           updateSettings({ claudeAgentBedrockArnOpus: event.target.value })
                         }
-                        placeholder="arn:aws:bedrock:…"
+                        placeholder={bedrockShellDefaults?.bedrockModelOverrideOpus || "arn:aws:bedrock:…"}
                         spellCheck={false}
                       />
                       <span className="text-xs text-muted-foreground">

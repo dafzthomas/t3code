@@ -26,6 +26,7 @@ import {
   type WsResponse as WsResponseMessage,
   WsResponse,
   type WsPushEnvelopeBase,
+  type BedrockShellDefaults,
 } from "@t3tools/contracts";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import {
@@ -78,6 +79,29 @@ import { expandHomePath } from "./os-jank.ts";
 import { makeServerPushBus } from "./wsServer/pushBus.ts";
 import { makeServerReadiness } from "./wsServer/readiness.ts";
 import { decodeJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
+
+function buildBedrockShellDefaults(): BedrockShellDefaults | undefined {
+  const env = process.env;
+  const useBedrock =
+    env.CLAUDE_CODE_USE_BEDROCK === "1" || env.CLAUDE_CODE_USE_BEDROCK === "true" ? true : undefined;
+
+  const defaults: BedrockShellDefaults = {
+    ...(useBedrock ? { useBedrock } : {}),
+    ...(env.AWS_REGION ? { awsRegion: env.AWS_REGION } : {}),
+    ...(env.AWS_PROFILE ? { awsProfile: env.AWS_PROFILE } : {}),
+    ...(env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU
+      ? { bedrockModelOverrideHaiku: env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU }
+      : {}),
+    ...(env.CLAUDE_CODE_BEDROCK_MODEL_SONNET
+      ? { bedrockModelOverrideSonnet: env.CLAUDE_CODE_BEDROCK_MODEL_SONNET }
+      : {}),
+    ...(env.CLAUDE_CODE_BEDROCK_MODEL_OPUS
+      ? { bedrockModelOverrideOpus: env.CLAUDE_CODE_BEDROCK_MODEL_OPUS }
+      : {}),
+  };
+
+  return Object.keys(defaults).length > 0 ? defaults : undefined;
+}
 
 /**
  * ServerShape - Service API for server lifecycle control.
@@ -866,8 +890,9 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         return yield* terminalManager.close(body);
       }
 
-      case WS_METHODS.serverGetConfig:
+      case WS_METHODS.serverGetConfig: {
         const keybindingsConfig = yield* keybindingsManager.loadConfigState;
+        const bedrockShellDefaults = buildBedrockShellDefaults();
         return {
           cwd,
           keybindingsConfigPath,
@@ -875,7 +900,9 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
           issues: keybindingsConfig.issues,
           providers: providerStatuses,
           availableEditors,
+          ...(bedrockShellDefaults ? { bedrockShellDefaults } : {}),
         };
+      }
 
       case WS_METHODS.serverUpsertKeybinding: {
         const body = stripRequestTag(request.body);

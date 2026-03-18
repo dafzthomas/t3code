@@ -127,8 +127,8 @@ function SettingsRouteView() {
   const availableEditors = serverConfigQuery.data?.availableEditors;
 
   const gitTextGenerationModelOptions = getAppModelOptions(
-    "codex",
-    settings.customCodexModels,
+    "claudeAgent",
+    settings.customClaudeModels,
     settings.textGenerationModel,
   );
   const selectedGitTextGenerationModelLabel =

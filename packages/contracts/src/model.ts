@@ -56,7 +56,7 @@ export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderKind, ModelSlug> = {
   claudeAgent: "claude-sonnet-4-6",
 };
 
-export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.4-mini" as const;
+export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "claude-haiku-4-5" as const;
 
 // Backward compatibility for existing Codex-only call sites.
 export const MODEL_OPTIONS = MODEL_OPTIONS_BY_PROVIDER.codex;

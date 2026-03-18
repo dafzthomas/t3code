@@ -248,7 +248,7 @@ function SettingsRouteView() {
               <div className="mb-4">
                 <h2 className="text-sm font-medium text-foreground">Appearance</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Choose how T3 Code looks across the app.
+                  Choose how Haven Code looks across the app.
                 </p>
               </div>
 
@@ -342,6 +342,22 @@ function SettingsRouteView() {
               </div>
 
               <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Enable Codex provider</p>
+                    <p className="text-xs text-muted-foreground">
+                      Show the Codex (OpenAI) provider in the model picker. Disabled by default.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.enableCodexProvider}
+                    onCheckedChange={(checked) =>
+                      updateSettings({ enableCodexProvider: Boolean(checked) })
+                    }
+                    aria-label="Enable Codex provider"
+                  />
+                </div>
+
                 <label htmlFor="codex-binary-path" className="block space-y-1">
                   <span className="text-xs font-medium text-foreground">Codex binary path</span>
                   <Input

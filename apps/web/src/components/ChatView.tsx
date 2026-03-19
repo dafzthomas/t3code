@@ -2456,7 +2456,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
         ? parseStandaloneComposerSlashCommand(trimmed)
         : null;
     if (standaloneSlashCommand) {
-      await handleInteractionModeChange(standaloneSlashCommand);
+      handleInteractionModeChange(standaloneSlashCommand);
       promptRef.current = "";
       clearComposerDraftContent(activeThread.id);
       setComposerHighlightedItemId(null);
@@ -2512,7 +2512,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
     const outgoingMessageText = formatOutgoingPrompt({
       provider: selectedProvider,
       effort: selectedPromptEffort,
-      text: trimmed || IMAGE_ONLY_BOOTSTRAP_PROMPT,
+      text: messageTextForSend || IMAGE_ONLY_BOOTSTRAP_PROMPT,
     });
     const turnAttachmentsPromise = Promise.all(
       composerImagesSnapshot.map(async (image) => ({
@@ -3670,8 +3670,6 @@ export default function ChatView({ threadId }: ChatViewProps) {
                       />
                     </div>
                   ) : null}
-
-                  {/* Textarea area */}
                   <div
                     className={cn(
                       "relative px-3 pb-2 sm:px-4",
@@ -4068,7 +4066,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
                                       disabled={isSendBusy || isConnecting}
                                       onClick={() => void onImplementPlanInNewThread()}
                                     >
-                                      Implement in new thread
+                                      Implement in a new thread
                                     </MenuItem>
                                   </MenuPopup>
                                 </Menu>
@@ -4079,9 +4077,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
                               type="submit"
                               className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/90 text-primary-foreground transition-all duration-150 hover:bg-primary hover:scale-105 disabled:opacity-30 disabled:hover:scale-100 sm:h-8 sm:w-8"
                               disabled={
-                                isSendBusy ||
-                                isConnecting ||
-                                (!prompt.trim() && composerImages.length === 0)
+                                isSendBusy || isConnecting || !composerSendState.hasSendableContent
                               }
                               aria-label={
                                 isConnecting

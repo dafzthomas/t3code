@@ -16,27 +16,29 @@ async function mountPicker(props?: {
   fastModeEnabled?: boolean;
 }) {
   const threadId = ThreadId.makeUnsafe("thread-claude-traits");
-  useComposerDraftStore.setState({
-    draftsByThreadId: {
-      [threadId]: {
-        prompt: props?.prompt ?? "",
-        images: [],
-        nonPersistedImageIds: [],
-        persistedAttachments: [],
-        terminalContexts: [],
-        provider: "claudeAgent",
-        model: props?.model ?? "claude-opus-4-6",
-        modelOptions: {
-          claudeAgent: {
-            ...(props?.effort ? { effort: props.effort } : {}),
-            ...(props?.thinkingEnabled === false ? { thinking: false } : {}),
-            ...(props?.fastModeEnabled ? { fastMode: true } : {}),
-          },
-        },
-        runtimeMode: null,
-        interactionMode: null,
+  const draftsByThreadId = {} as ReturnType<
+    typeof useComposerDraftStore.getState
+  >["draftsByThreadId"];
+  draftsByThreadId[threadId] = {
+    prompt: props?.prompt ?? "",
+    images: [],
+    nonPersistedImageIds: [],
+    persistedAttachments: [],
+    terminalContexts: [],
+    provider: "claudeAgent",
+    model: props?.model ?? "claude-opus-4-6",
+    modelOptions: {
+      claudeAgent: {
+        ...(props?.effort ? { effort: props.effort } : {}),
+        ...(props?.thinkingEnabled === false ? { thinking: false } : {}),
+        ...(props?.fastModeEnabled ? { fastMode: true } : {}),
       },
     },
+    runtimeMode: null,
+    interactionMode: null,
+  };
+  useComposerDraftStore.setState({
+    draftsByThreadId,
     draftThreadsByThreadId: {},
     projectDraftThreadIdByProjectId: {},
   });

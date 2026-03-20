@@ -1,8 +1,8 @@
-import {
-  type CodexModelOptions,
-  type CodexReasoningEffort,
-  type ProviderModelOptions,
-  type ThreadId,
+import type {
+  CodexModelOptions,
+  CodexReasoningEffort,
+  ProviderModelOptions,
+  ThreadId,
 } from "@t3tools/contracts";
 import {
   getDefaultReasoningEffort,
@@ -132,12 +132,14 @@ export const CodexTraitsPicker = memo(function CodexTraitsPicker(props: { thread
           <Button
             size="sm"
             variant="ghost"
-            className="shrink-0 whitespace-nowrap px-2 text-muted-foreground/70 hover:text-foreground/80 sm:px-3"
+            className="min-w-0 max-w-40 shrink justify-start overflow-hidden whitespace-nowrap px-2 text-muted-foreground/70 hover:text-foreground/80 sm:max-w-48 sm:px-3 [&_svg]:mx-0"
           />
         }
       >
-        <span>{triggerLabel}</span>
-        <ChevronDownIcon aria-hidden="true" className="size-3 opacity-60" />
+        <span className="flex min-w-0 w-full items-center gap-2 overflow-hidden">
+          {triggerLabel}
+          <ChevronDownIcon aria-hidden="true" className="size-3 shrink-0 opacity-60" />
+        </span>
       </MenuTrigger>
       <MenuPopup align="start">
         <CodexTraitsMenuContent threadId={props.threadId} />

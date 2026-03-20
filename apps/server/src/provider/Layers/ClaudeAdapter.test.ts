@@ -8,6 +8,7 @@ import type {
 import { ApprovalRequestId, ProviderItemId, ThreadId } from "@t3tools/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Fiber, Random, Stream } from "effect";
+import { afterEach, beforeEach } from "vitest";
 
 import { ProviderAdapterValidationError } from "../Errors.ts";
 import { ClaudeAdapter } from "../Services/ClaudeAdapter.ts";
@@ -92,6 +93,26 @@ class FakeClaudeQuery implements AsyncIterable<SDKMessage> {
     };
   }
 }
+
+const BEDROCK_ENV_KEYS = [
+  "CLAUDE_CODE_USE_BEDROCK",
+  "AWS_REGION",
+  "AWS_DEFAULT_REGION",
+  "AWS_PROFILE",
+  "CLAUDE_CODE_BEDROCK_MODEL",
+  "CLAUDE_CODE_BEDROCK_MODEL_HAIKU",
+  "CLAUDE_CODE_BEDROCK_MODEL_SONNET",
+  "CLAUDE_CODE_BEDROCK_MODEL_OPUS",
+  "ANTHROPIC_MODEL",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL",
+  "ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION",
+] as const;
+
+const ORIGINAL_BEDROCK_ENV = Object.fromEntries(
+  BEDROCK_ENV_KEYS.map((key) => [key, process.env[key]]),
+) as Record<(typeof BEDROCK_ENV_KEYS)[number], string | undefined>;
 
 interface Harness {
   readonly layer: ReturnType<typeof makeClaudeAdapterLive>;
@@ -182,6 +203,23 @@ const THREAD_ID = ThreadId.makeUnsafe("thread-claude-1");
 const RESUME_THREAD_ID = ThreadId.makeUnsafe("thread-claude-resume");
 
 describe("ClaudeAdapterLive", () => {
+  beforeEach(() => {
+    for (const key of BEDROCK_ENV_KEYS) {
+      delete process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    for (const key of BEDROCK_ENV_KEYS) {
+      const value = ORIGINAL_BEDROCK_ENV[key];
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  });
+
   it.effect("returns validation error for non-claude provider on startSession", () => {
     const harness = makeHarness();
     return Effect.gen(function* () {

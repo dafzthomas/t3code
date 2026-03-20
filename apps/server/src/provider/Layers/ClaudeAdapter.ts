@@ -60,6 +60,46 @@ import { ClaudeAdapter, type ClaudeAdapterShape } from "../Services/ClaudeAdapte
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "claudeAgent" as const;
+
+/**
+ * When Bedrock is enabled, resolve a friendly model slug (e.g. "claude-sonnet-4-6")
+ * to the configured Bedrock model override ARN/ID. Custom IDs are passed through.
+ *
+ * Only rewrites known friendly slugs. If no override is configured for a friendly slug,
+ * we return `undefined` so the CLI can fall back to its Bedrock defaults.
+ */
+function resolveBedrockModel(
+  model: string | undefined,
+  env: Record<string, string | undefined>,
+): string | undefined {
+  if (!model) return model;
+  const isBedrock = env.CLAUDE_CODE_USE_BEDROCK === "1" || env.CLAUDE_CODE_USE_BEDROCK === "true";
+  if (!isBedrock) return model;
+
+  const slug = model.toLowerCase();
+  const haikuOverride = env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU || env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+  const sonnetOverride = env.CLAUDE_CODE_BEDROCK_MODEL_SONNET || env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  const opusOverride = env.CLAUDE_CODE_BEDROCK_MODEL_OPUS || env.ANTHROPIC_DEFAULT_OPUS_MODEL;
+  if (
+    model.startsWith("arn:") ||
+    model.includes("foundation-model/") ||
+    model.includes("inference-profile/")
+  ) {
+    return model;
+  }
+  if (slug.includes("haiku")) {
+    return haikuOverride || undefined;
+  }
+  if (slug.includes("opus")) {
+    return opusOverride || undefined;
+  }
+  if (slug.includes("sonnet")) {
+    return sonnetOverride || undefined;
+  }
+  // Not a known friendly slug — pass through as-is (e.g. ARN or custom model ID).
+  return model;
+}
+
 type ClaudeTextStreamKind = Extract<RuntimeContentStreamKind, "assistant_text" | "reasoning_text">;
 type ClaudeToolResultStreamKind = Extract<
   RuntimeContentStreamKind,
@@ -128,7 +168,7 @@ interface ClaudeSessionContext {
   readonly query: ClaudeQueryRuntime;
   readonly startedAt: string;
   readonly basePermissionMode: PermissionMode | undefined;
-  readonly bedrockOptions: BedrockOptions | undefined;
+  readonly sessionEnv: Record<string, string | undefined>;
   resumeSessionId: string | undefined;
   readonly pendingApprovals: Map<ApprovalRequestId, PendingApproval>;
   readonly pendingUserInputs: Map<ApprovalRequestId, PendingUserInput>;
@@ -215,16 +255,16 @@ function isBedrockActiveFromSettings(opts: BedrockOptions | undefined): boolean 
   if (!opts) return false;
   return Boolean(
     opts.useBedrock ||
-      opts.awsRegion ||
-      opts.awsProfile ||
-      opts.bedrockModelOverrideHaiku ||
-      opts.bedrockModelOverrideSonnet ||
-      opts.bedrockModelOverrideOpus,
+    opts.awsRegion ||
+    opts.awsProfile ||
+    opts.bedrockModelOverrideHaiku ||
+    opts.bedrockModelOverrideSonnet ||
+    opts.bedrockModelOverrideOpus,
   );
 }
 
 function isBedrockActiveFromEnv(env: NodeJS.ProcessEnv): boolean {
-  return env.CLAUDE_CODE_USE_BEDROCK === "1";
+  return env.CLAUDE_CODE_USE_BEDROCK === "1" || env.CLAUDE_CODE_USE_BEDROCK === "true";
 }
 
 function bedrockOptionsFromEnv(env: NodeJS.ProcessEnv): BedrockOptions {
@@ -232,23 +272,13 @@ function bedrockOptionsFromEnv(env: NodeJS.ProcessEnv): BedrockOptions {
     useBedrock: true,
     awsRegion: env.AWS_REGION || env.AWS_DEFAULT_REGION || undefined,
     awsProfile: env.AWS_PROFILE || undefined,
-    bedrockModelOverrideHaiku: env.ANTHROPIC_DEFAULT_HAIKU_MODEL || undefined,
-    bedrockModelOverrideSonnet: env.ANTHROPIC_DEFAULT_SONNET_MODEL || undefined,
-    bedrockModelOverrideOpus: env.ANTHROPIC_DEFAULT_OPUS_MODEL || undefined,
+    bedrockModelOverrideHaiku:
+      env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU || env.ANTHROPIC_DEFAULT_HAIKU_MODEL || undefined,
+    bedrockModelOverrideSonnet:
+      env.CLAUDE_CODE_BEDROCK_MODEL_SONNET || env.ANTHROPIC_DEFAULT_SONNET_MODEL || undefined,
+    bedrockModelOverrideOpus:
+      env.CLAUDE_CODE_BEDROCK_MODEL_OPUS || env.ANTHROPIC_DEFAULT_OPUS_MODEL || undefined,
   };
-}
-
-function resolveBedrockModel(
-  modelSlug: string | undefined,
-  opts: BedrockOptions,
-): string | undefined {
-  if (!modelSlug) return opts.bedrockModelOverrideSonnet ?? opts.bedrockModelOverrideOpus;
-  const slug = modelSlug.toLowerCase();
-  if (slug.includes("haiku") && opts.bedrockModelOverrideHaiku) return opts.bedrockModelOverrideHaiku;
-  if (slug.includes("opus") && opts.bedrockModelOverrideOpus) return opts.bedrockModelOverrideOpus;
-  if (opts.bedrockModelOverrideSonnet) return opts.bedrockModelOverrideSonnet;
-  if (opts.bedrockModelOverrideOpus) return opts.bedrockModelOverrideOpus;
-  return undefined;
 }
 
 function buildBedrockEnv(
@@ -260,21 +290,26 @@ function buildBedrockEnv(
   env.CLAUDE_CODE_USE_BEDROCK = "1";
   if (opts.awsRegion) {
     env.AWS_REGION = opts.awsRegion;
+    env.AWS_DEFAULT_REGION = opts.awsRegion;
     env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION = opts.awsRegion;
   }
   if (opts.awsProfile) {
     env.AWS_PROFILE = opts.awsProfile;
   }
   if (opts.bedrockModelOverrideHaiku) {
+    env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU = opts.bedrockModelOverrideHaiku;
     env.ANTHROPIC_DEFAULT_HAIKU_MODEL = opts.bedrockModelOverrideHaiku;
   }
   if (opts.bedrockModelOverrideSonnet) {
+    env.CLAUDE_CODE_BEDROCK_MODEL_SONNET = opts.bedrockModelOverrideSonnet;
     env.ANTHROPIC_DEFAULT_SONNET_MODEL = opts.bedrockModelOverrideSonnet;
   }
   if (opts.bedrockModelOverrideOpus) {
+    env.CLAUDE_CODE_BEDROCK_MODEL_OPUS = opts.bedrockModelOverrideOpus;
     env.ANTHROPIC_DEFAULT_OPUS_MODEL = opts.bedrockModelOverrideOpus;
   }
   if (resolvedModelArn) {
+    env.CLAUDE_CODE_BEDROCK_MODEL = resolvedModelArn;
     env.ANTHROPIC_MODEL = resolvedModelArn;
   }
   return env;
@@ -2298,13 +2333,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           : bedrockFromEnv
             ? bedrockOptionsFromEnv(process.env)
             : undefined;
-        const resolvedModelArn = bedrock
-          ? resolveBedrockModel(input.model, effectiveBedrockOpts!)
-          : undefined;
-        const sessionModel = bedrock ? resolvedModelArn : input.model;
-        const sessionEnv = bedrockFromSettings
-          ? buildBedrockEnv(process.env, providerOptions!, resolvedModelArn)
+        const sessionEnv = effectiveBedrockOpts
+          ? buildBedrockEnv(process.env, effectiveBedrockOpts, undefined)
           : process.env;
+        const resolvedModelArn = bedrock ? resolveBedrockModel(input.model, sessionEnv) : undefined;
+        const sessionModel = bedrock ? resolvedModelArn : input.model;
         const requestedEffort = resolveReasoningEffortForProvider(
           "claudeAgent",
           input.modelOptions?.claudeAgent?.effort ?? null,
@@ -2394,7 +2427,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           query: queryRuntime,
           startedAt,
           basePermissionMode: permissionMode,
-          bedrockOptions: effectiveBedrockOpts,
+          sessionEnv: sessionEnv as Record<string, string | undefined>,
           resumeSessionId: resumeState?.resume,
           pendingApprovals,
           pendingUserInputs,
@@ -2472,9 +2505,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         if (input.model) {
-          const turnModel = context.bedrockOptions
-            ? resolveBedrockModel(input.model, context.bedrockOptions)
-            : input.model;
+          const turnModel = resolveBedrockModel(input.model, context.sessionEnv);
           if (turnModel) {
             yield* Effect.tryPromise({
               try: () => context.query.setModel(turnModel),

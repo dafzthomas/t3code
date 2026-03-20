@@ -26,6 +26,7 @@ import {
   type WsResponse as WsResponseMessage,
   WsResponse,
   type WsPushEnvelopeBase,
+  type BedrockShellDefaults,
 } from "@t3tools/contracts";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import {
@@ -79,6 +80,32 @@ import { makeServerPushBus } from "./wsServer/pushBus.ts";
 import { makeServerReadiness } from "./wsServer/readiness.ts";
 import { decodeJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
 
+function buildBedrockShellDefaults(): BedrockShellDefaults | undefined {
+  const env = process.env;
+  const useBedrock =
+    env.CLAUDE_CODE_USE_BEDROCK === "1" || env.CLAUDE_CODE_USE_BEDROCK === "true"
+      ? true
+      : undefined;
+  const awsRegion = env.AWS_REGION || env.AWS_DEFAULT_REGION;
+  const bedrockModelOverrideHaiku =
+    env.CLAUDE_CODE_BEDROCK_MODEL_HAIKU || env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+  const bedrockModelOverrideSonnet =
+    env.CLAUDE_CODE_BEDROCK_MODEL_SONNET || env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+  const bedrockModelOverrideOpus =
+    env.CLAUDE_CODE_BEDROCK_MODEL_OPUS || env.ANTHROPIC_DEFAULT_OPUS_MODEL;
+
+  const defaults: BedrockShellDefaults = {
+    ...(useBedrock ? { useBedrock } : {}),
+    ...(awsRegion ? { awsRegion } : {}),
+    ...(env.AWS_PROFILE ? { awsProfile: env.AWS_PROFILE } : {}),
+    ...(bedrockModelOverrideHaiku ? { bedrockModelOverrideHaiku } : {}),
+    ...(bedrockModelOverrideSonnet ? { bedrockModelOverrideSonnet } : {}),
+    ...(bedrockModelOverrideOpus ? { bedrockModelOverrideOpus } : {}),
+  };
+
+  return Object.keys(defaults).length > 0 ? defaults : undefined;
+}
+
 /**
  * ServerShape - Service API for server lifecycle control.
  */
@@ -101,7 +128,9 @@ export interface ServerShape {
 /**
  * Server - Service tag for HTTP/WebSocket lifecycle management.
  */
-export class Server extends ServiceMap.Service<Server, ServerShape>()("haven-code/wsServer/Server") {}
+export class Server extends ServiceMap.Service<Server, ServerShape>()(
+  "haven-code/wsServer/Server",
+) {}
 
 const isServerNotRunningError = (error: Error): boolean => {
   const maybeCode = (error as NodeJS.ErrnoException).code;
@@ -866,8 +895,9 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         return yield* terminalManager.close(body);
       }
 
-      case WS_METHODS.serverGetConfig:
+      case WS_METHODS.serverGetConfig: {
         const keybindingsConfig = yield* keybindingsManager.loadConfigState;
+        const bedrockShellDefaults = buildBedrockShellDefaults();
         return {
           cwd,
           keybindingsConfigPath,
@@ -875,27 +905,9 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
           issues: keybindingsConfig.issues,
           providers: providerStatuses,
           availableEditors,
-          ...(process.env.CLAUDE_CODE_USE_BEDROCK === "1"
-            ? {
-                bedrockEnvironment: {
-                  detected: true,
-                  ...(process.env.AWS_REGION ? { awsRegion: process.env.AWS_REGION } : {}),
-                  ...(process.env.ANTHROPIC_MODEL
-                    ? { anthropicModel: process.env.ANTHROPIC_MODEL }
-                    : {}),
-                  ...(process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL
-                    ? { anthropicDefaultHaikuModel: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL }
-                    : {}),
-                  ...(process.env.ANTHROPIC_DEFAULT_SONNET_MODEL
-                    ? { anthropicDefaultSonnetModel: process.env.ANTHROPIC_DEFAULT_SONNET_MODEL }
-                    : {}),
-                  ...(process.env.ANTHROPIC_DEFAULT_OPUS_MODEL
-                    ? { anthropicDefaultOpusModel: process.env.ANTHROPIC_DEFAULT_OPUS_MODEL }
-                    : {}),
-                },
-              }
-            : {}),
+          ...(bedrockShellDefaults ? { bedrockShellDefaults } : {}),
         };
+      }
 
       case WS_METHODS.serverUpsertKeybinding: {
         const body = stripRequestTag(request.body);

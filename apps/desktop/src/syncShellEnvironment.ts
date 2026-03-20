@@ -1,13 +1,16 @@
 import { readEnvironmentFromLoginShell, ShellEnvironmentReader } from "@t3tools/shared/shell";
 
-const CLAUDE_BEDROCK_ENV_VARS = [
+const BEDROCK_ENV_VARS = [
+  "CLAUDE_CODE_USE_BEDROCK",
   "AWS_REGION",
   "AWS_DEFAULT_REGION",
   "AWS_PROFILE",
+  "CLAUDE_CODE_BEDROCK_MODEL_HAIKU",
+  "CLAUDE_CODE_BEDROCK_MODEL_SONNET",
+  "CLAUDE_CODE_BEDROCK_MODEL_OPUS",
   "AWS_ACCESS_KEY_ID",
   "AWS_SECRET_ACCESS_KEY",
   "AWS_SESSION_TOKEN",
-  "CLAUDE_CODE_USE_BEDROCK",
   "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
   "MAX_THINKING_TOKENS",
   "ANTHROPIC_MODEL",
@@ -31,7 +34,7 @@ export function syncShellEnvironment(
     const shellEnvironment = (options.readEnvironment ?? readEnvironmentFromLoginShell)(shell, [
       "PATH",
       "SSH_AUTH_SOCK",
-      ...CLAUDE_BEDROCK_ENV_VARS,
+      ...BEDROCK_ENV_VARS,
     ]);
 
     if (shellEnvironment.PATH) {
@@ -42,9 +45,9 @@ export function syncShellEnvironment(
       env.SSH_AUTH_SOCK = shellEnvironment.SSH_AUTH_SOCK;
     }
 
-    for (const key of CLAUDE_BEDROCK_ENV_VARS) {
-      if (!env[key] && shellEnvironment[key]) {
-        env[key] = shellEnvironment[key];
+    for (const name of BEDROCK_ENV_VARS) {
+      if (!env[name] && shellEnvironment[name]) {
+        env[name] = shellEnvironment[name];
       }
     }
   } catch {

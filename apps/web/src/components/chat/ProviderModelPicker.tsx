@@ -91,6 +91,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   bedrockActive?: boolean;
   compact?: boolean;
   disabled?: boolean;
+  providerLabelOverrides?: Partial<Record<ProviderKind, string>>;
   onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -105,6 +106,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   const selectedProviderOptions = props.modelOptionsByProvider[activeProvider];
   const selectedModelLabel =
     selectedProviderOptions.find((option) => option.slug === props.model)?.name ?? props.model;
+  const providerLabelOverride = props.providerLabelOverrides?.[activeProvider];
   const ProviderIcon = PROVIDER_ICON_BY_PROVIDER[activeProvider];
   const handleModelChange = (provider: ProviderKind, value: string) => {
     if (props.disabled) return;
@@ -160,7 +162,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
             )}
           />
           <span className="min-w-0 flex-1 truncate">{selectedModelLabel}</span>
-          {props.bedrockActive && activeProvider === "claudeAgent" && (
+          {(props.bedrockActive || providerLabelOverride) && activeProvider === "claudeAgent" && (
             <span className="shrink-0 rounded bg-amber-500/15 px-1 py-px text-[10px] font-medium text-amber-600 dark:text-amber-400">
               Bedrock
             </span>
@@ -190,6 +192,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
           <>
             {availableProviderOptions.map((option) => {
               const OptionIcon = PROVIDER_ICON_BY_PROVIDER[option.value];
+              const displayLabel = props.providerLabelOverrides?.[option.value] ?? option.label;
               return (
                 <MenuSub key={option.value}>
                   <MenuSubTrigger>
@@ -200,7 +203,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
                         providerIconClassName(option.value, "text-muted-foreground/85"),
                       )}
                     />
-                    {option.label}
+                    {displayLabel}
                   </MenuSubTrigger>
                   <MenuSubPopup className="[--available-height:min(24rem,70vh)]">
                     <MenuGroup>

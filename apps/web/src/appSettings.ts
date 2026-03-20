@@ -38,28 +38,26 @@ const AppSettingsSchema = Schema.Struct({
   customClaudeModels: Schema.Array(Schema.String).pipe(
     Schema.withConstructorDefault(() => Option.some([])),
   ),
+  enableCodexProvider: Schema.Boolean.pipe(Schema.withConstructorDefault(() => Option.some(false))),
+  claudeAgentUseBedrock: Schema.Boolean.pipe(
+    Schema.withConstructorDefault(() => Option.some(false)),
+  ),
+  claudeAgentAwsRegion: Schema.String.check(Schema.isMaxLength(64)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeAgentAwsProfile: Schema.String.check(Schema.isMaxLength(256)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeAgentBedrockArnHaiku: Schema.String.check(Schema.isMaxLength(2048)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeAgentBedrockArnSonnet: Schema.String.check(Schema.isMaxLength(2048)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
+  claudeAgentBedrockArnOpus: Schema.String.check(Schema.isMaxLength(2048)).pipe(
+    Schema.withConstructorDefault(() => Option.some("")),
+  ),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
-  enableCodexProvider: Schema.Boolean.pipe(
-    Schema.withConstructorDefault(() => Option.some(false)),
-  ),
-  claudeUseBedrock: Schema.Boolean.pipe(
-    Schema.withConstructorDefault(() => Option.some(false)),
-  ),
-  claudeAwsRegion: Schema.String.check(Schema.isMaxLength(256)).pipe(
-    Schema.withConstructorDefault(() => Option.some("")),
-  ),
-  claudeAwsProfile: Schema.String.check(Schema.isMaxLength(256)).pipe(
-    Schema.withConstructorDefault(() => Option.some("")),
-  ),
-  claudeBedrockArnHaiku: Schema.String.check(Schema.isMaxLength(1024)).pipe(
-    Schema.withConstructorDefault(() => Option.some("")),
-  ),
-  claudeBedrockArnSonnet: Schema.String.check(Schema.isMaxLength(1024)).pipe(
-    Schema.withConstructorDefault(() => Option.some("")),
-  ),
-  claudeBedrockArnOpus: Schema.String.check(Schema.isMaxLength(1024)).pipe(
-    Schema.withConstructorDefault(() => Option.some("")),
-  ),
 });
 export type AppSettings = typeof AppSettingsSchema.Type;
 export interface AppModelOption {

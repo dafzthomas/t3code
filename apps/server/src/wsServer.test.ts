@@ -824,14 +824,16 @@ describe("WebSocket Server", () => {
 
     const response = await sendRequest(ws, WS_METHODS.serverGetConfig);
     expect(response.error).toBeUndefined();
-    expect(response.result).toEqual({
-      cwd: "/my/workspace",
-      keybindingsConfigPath: keybindingsPath,
-      keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
-      issues: [],
-      providers: defaultProviderStatuses,
-      availableEditors: expect.any(Array),
-    });
+    expect(response.result).toEqual(
+      expect.objectContaining({
+        cwd: "/my/workspace",
+        keybindingsConfigPath: keybindingsPath,
+        keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
+        issues: [],
+        providers: defaultProviderStatuses,
+        availableEditors: expect.any(Array),
+      }),
+    );
     expectAvailableEditors((response.result as { availableEditors: unknown }).availableEditors);
   });
 
@@ -849,14 +851,16 @@ describe("WebSocket Server", () => {
 
     const response = await sendRequest(ws, WS_METHODS.serverGetConfig);
     expect(response.error).toBeUndefined();
-    expect(response.result).toEqual({
-      cwd: "/my/workspace",
-      keybindingsConfigPath: keybindingsPath,
-      keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
-      issues: [],
-      providers: defaultProviderStatuses,
-      availableEditors: expect.any(Array),
-    });
+    expect(response.result).toEqual(
+      expect.objectContaining({
+        cwd: "/my/workspace",
+        keybindingsConfigPath: keybindingsPath,
+        keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
+        issues: [],
+        providers: defaultProviderStatuses,
+        availableEditors: expect.any(Array),
+      }),
+    );
     expectAvailableEditors((response.result as { availableEditors: unknown }).availableEditors);
 
     const persistedConfig = JSON.parse(
@@ -879,19 +883,21 @@ describe("WebSocket Server", () => {
 
     const response = await sendRequest(ws, WS_METHODS.serverGetConfig);
     expect(response.error).toBeUndefined();
-    expect(response.result).toEqual({
-      cwd: "/my/workspace",
-      keybindingsConfigPath: keybindingsPath,
-      keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
-      issues: [
-        {
-          kind: "keybindings.malformed-config",
-          message: expect.stringContaining("expected JSON array"),
-        },
-      ],
-      providers: defaultProviderStatuses,
-      availableEditors: expect.any(Array),
-    });
+    expect(response.result).toEqual(
+      expect.objectContaining({
+        cwd: "/my/workspace",
+        keybindingsConfigPath: keybindingsPath,
+        keybindings: DEFAULT_RESOLVED_KEYBINDINGS,
+        issues: [
+          {
+            kind: "keybindings.malformed-config",
+            message: expect.stringContaining("expected JSON array"),
+          },
+        ],
+        providers: defaultProviderStatuses,
+        availableEditors: expect.any(Array),
+      }),
+    );
     expectAvailableEditors((response.result as { availableEditors: unknown }).availableEditors);
     expect(fs.readFileSync(keybindingsPath, "utf8")).toBe("{ not-json");
   });
@@ -1031,14 +1037,16 @@ describe("WebSocket Server", () => {
     const persistedConfig = JSON.parse(
       fs.readFileSync(keybindingsPath, "utf8"),
     ) as KeybindingsConfig;
-    expect(response.result).toEqual({
-      cwd: "/my/workspace",
-      keybindingsConfigPath: keybindingsPath,
-      keybindings: compileKeybindings(persistedConfig),
-      issues: [],
-      providers: defaultProviderStatuses,
-      availableEditors: expect.any(Array),
-    });
+    expect(response.result).toEqual(
+      expect.objectContaining({
+        cwd: "/my/workspace",
+        keybindingsConfigPath: keybindingsPath,
+        keybindings: compileKeybindings(persistedConfig),
+        issues: [],
+        providers: defaultProviderStatuses,
+        availableEditors: expect.any(Array),
+      }),
+    );
     expectAvailableEditors((response.result as { availableEditors: unknown }).availableEditors);
   });
 
@@ -1078,14 +1086,16 @@ describe("WebSocket Server", () => {
 
     const configResponse = await sendRequest(ws, WS_METHODS.serverGetConfig);
     expect(configResponse.error).toBeUndefined();
-    expect(configResponse.result).toEqual({
-      cwd: "/my/workspace",
-      keybindingsConfigPath: keybindingsPath,
-      keybindings: compileKeybindings(persistedConfig),
-      issues: [],
-      providers: defaultProviderStatuses,
-      availableEditors: expect.any(Array),
-    });
+    expect(configResponse.result).toEqual(
+      expect.objectContaining({
+        cwd: "/my/workspace",
+        keybindingsConfigPath: keybindingsPath,
+        keybindings: compileKeybindings(persistedConfig),
+        issues: [],
+        providers: defaultProviderStatuses,
+        availableEditors: expect.any(Array),
+      }),
+    );
     expectAvailableEditors(
       (configResponse.result as { availableEditors: unknown }).availableEditors,
     );

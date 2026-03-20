@@ -45,15 +45,15 @@ export type ServerProviderStatus = typeof ServerProviderStatus.Type;
 
 const ServerProviderStatuses = Schema.Array(ServerProviderStatus);
 
-export const BedrockEnvironment = Schema.Struct({
-  detected: Schema.Boolean,
-  awsRegion: Schema.optional(TrimmedNonEmptyString),
-  anthropicModel: Schema.optional(TrimmedNonEmptyString),
-  anthropicDefaultHaikuModel: Schema.optional(TrimmedNonEmptyString),
-  anthropicDefaultSonnetModel: Schema.optional(TrimmedNonEmptyString),
-  anthropicDefaultOpusModel: Schema.optional(TrimmedNonEmptyString),
+export const BedrockShellDefaults = Schema.Struct({
+  useBedrock: Schema.optional(Schema.Boolean),
+  awsRegion: Schema.optional(Schema.String),
+  awsProfile: Schema.optional(Schema.String),
+  bedrockModelOverrideHaiku: Schema.optional(Schema.String),
+  bedrockModelOverrideSonnet: Schema.optional(Schema.String),
+  bedrockModelOverrideOpus: Schema.optional(Schema.String),
 });
-export type BedrockEnvironment = typeof BedrockEnvironment.Type;
+export type BedrockShellDefaults = typeof BedrockShellDefaults.Type;
 
 export const ServerConfig = Schema.Struct({
   cwd: TrimmedNonEmptyString,
@@ -62,7 +62,7 @@ export const ServerConfig = Schema.Struct({
   issues: ServerConfigIssues,
   providers: ServerProviderStatuses,
   availableEditors: Schema.Array(EditorId),
-  bedrockEnvironment: Schema.optional(BedrockEnvironment),
+  bedrockShellDefaults: Schema.optional(BedrockShellDefaults),
 });
 export type ServerConfig = typeof ServerConfig.Type;
 

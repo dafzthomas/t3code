@@ -126,8 +126,11 @@ interface ClaudeTurnState {
   readonly turnId: TurnId;
   readonly startedAt: string;
   readonly items: Array<unknown>;
+  readonly userMessage: SDKUserMessage;
   readonly assistantTextBlocks: Map<number, AssistantTextBlockState>;
   readonly assistantTextBlockOrder: Array<number>;
+  sdkMessagesObserved: number;
+  startupRetryCount: number;
   nextSyntheticAssistantBlockIndex: number;
 }
 
@@ -165,7 +168,8 @@ interface ToolInFlight {
 interface ClaudeSessionContext {
   session: ProviderSession;
   readonly promptQueue: Queue.Queue<PromptQueueItem>;
-  readonly query: ClaudeQueryRuntime;
+  readonly queryOptions: ClaudeQueryOptions;
+  query: ClaudeQueryRuntime;
   readonly startedAt: string;
   readonly basePermissionMode: PermissionMode | undefined;
   readonly sessionEnv: Record<string, string | undefined>;
@@ -213,6 +217,10 @@ function toMessage(cause: unknown, fallback: string): string {
     return cause.message;
   }
   return fallback;
+}
+
+function isClaudeStartupExitError(message: string): boolean {
+  return /Claude Code process exited with code \d+/u.test(message);
 }
 
 function asRuntimeItemId(value: string): RuntimeItemId {
@@ -880,6 +888,36 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         };
       });
 
+    const makePromptIterable = (
+      promptQueue: Queue.Queue<PromptQueueItem>,
+    ): AsyncIterable<SDKUserMessage> =>
+      Stream.fromQueue(promptQueue).pipe(
+        Stream.filter((item) => item.type === "message"),
+        Stream.map((item) => item.message),
+        Stream.toAsyncIterable,
+      );
+
+    const createQueryRuntime = (
+      threadId: ThreadId,
+      promptQueue: Queue.Queue<PromptQueueItem>,
+      queryOptions: ClaudeQueryOptions,
+      detail: string,
+    ): Effect.Effect<ClaudeQueryRuntime, ProviderAdapterProcessError> =>
+      Effect.try({
+        try: () =>
+          createQuery({
+            prompt: makePromptIterable(promptQueue),
+            options: queryOptions,
+          }),
+        catch: (cause) =>
+          new ProviderAdapterProcessError({
+            provider: PROVIDER,
+            threadId,
+            detail,
+            cause,
+          }),
+      });
+
     const ensureAssistantTextBlock = (
       context: ClaudeSessionContext,
       blockIndex: number,
@@ -1167,6 +1205,49 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           },
           providerRefs: nativeProviderRefs(context),
         });
+      });
+
+    const retryColdStartTurn = (context: ClaudeSessionContext): Effect.Effect<boolean> =>
+      Effect.gen(function* () {
+        const turnState = context.turnState;
+        if (!turnState) {
+          return false;
+        }
+        if (turnState.sdkMessagesObserved > 0 || turnState.startupRetryCount > 0) {
+          return false;
+        }
+
+        turnState.startupRetryCount += 1;
+        context.query.close();
+
+        const nextQuery = yield* createQueryRuntime(
+          context.session.threadId,
+          context.promptQueue,
+          context.queryOptions,
+          "Failed to restart Claude runtime session.",
+        ).pipe(Effect.option);
+        if (nextQuery._tag === "None") {
+          return false;
+        }
+
+        context.query = nextQuery.value;
+        yield* emitRuntimeWarning(
+          context,
+          "Claude process exited before startup completed. Retrying once.",
+        );
+        const replayed = yield* Queue.offer(context.promptQueue, {
+          type: "message",
+          message: turnState.userMessage,
+        }).pipe(
+          Effect.as(true),
+          Effect.orElseSucceed(() => false),
+        );
+        if (!replayed) {
+          return false;
+        }
+
+        Effect.runFork(runSdkStream(context));
+        return true;
       });
 
     const completeTurn = (
@@ -1620,8 +1701,19 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             turnId,
             startedAt,
             items: [],
+            userMessage: {
+              type: "user",
+              session_id: "",
+              parent_tool_use_id: null,
+              message: {
+                role: "user",
+                content: [],
+              },
+            },
             assistantTextBlocks: new Map(),
             assistantTextBlockOrder: [],
+            sdkMessagesObserved: 0,
+            startupRetryCount: 0,
             nextSyntheticAssistantBlockIndex: -1,
           };
           context.session = {
@@ -1919,6 +2011,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       message: SDKMessage,
     ): Effect.Effect<void> =>
       Effect.gen(function* () {
+        if (context.turnState) {
+          context.turnState.sdkMessagesObserved += 1;
+        }
         yield* logNativeSdkMessage(context, message);
         yield* ensureThreadId(context, message);
 
@@ -1964,6 +2059,13 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               return;
             }
             const message = toMessage(Cause.squash(cause), "Claude runtime stream failed.");
+            if (
+              isClaudeStartupExitError(message) &&
+              context.lastThreadStartedId === undefined &&
+              (yield* retryColdStartTurn(context))
+            ) {
+              return;
+            }
             yield* emitRuntimeError(context, message, cause);
             yield* completeTurn(context, "failed", message);
           }),
@@ -2072,11 +2174,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const threadId = input.threadId;
 
         const promptQueue = yield* Queue.unbounded<PromptQueueItem>();
-        const prompt = Stream.fromQueue(promptQueue).pipe(
-          Stream.filter((item) => item.type === "message"),
-          Stream.map((item) => item.message),
-          Stream.toAsyncIterable,
-        );
 
         const pendingApprovals = new Map<ApprovalRequestId, PendingApproval>();
         const pendingUserInputs = new Map<ApprovalRequestId, PendingUserInput>();
@@ -2386,20 +2483,12 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           ...(input.cwd ? { additionalDirectories: [input.cwd] } : {}),
         };
 
-        const queryRuntime = yield* Effect.try({
-          try: () =>
-            createQuery({
-              prompt,
-              options: queryOptions,
-            }),
-          catch: (cause) =>
-            new ProviderAdapterProcessError({
-              provider: PROVIDER,
-              threadId,
-              detail: toMessage(cause, "Failed to start Claude runtime session."),
-              cause,
-            }),
-        });
+        const queryRuntime = yield* createQueryRuntime(
+          threadId,
+          promptQueue,
+          queryOptions,
+          "Failed to start Claude runtime session.",
+        );
 
         const session: ProviderSession = {
           threadId,
@@ -2424,6 +2513,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const context: ClaudeSessionContext = {
           session,
           promptQueue,
+          queryOptions,
           query: queryRuntime,
           startedAt,
           basePermissionMode: permissionMode,
@@ -2531,13 +2621,17 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           });
         }
 
+        const message = buildUserMessage(input);
         const turnId = TurnId.makeUnsafe(yield* Random.nextUUIDv4);
         const turnState: ClaudeTurnState = {
           turnId,
           startedAt: yield* nowIso,
           items: [],
+          userMessage: message,
           assistantTextBlocks: new Map(),
           assistantTextBlockOrder: [],
+          sdkMessagesObserved: 0,
+          startupRetryCount: 0,
           nextSyntheticAssistantBlockIndex: -1,
         };
 
@@ -2561,8 +2655,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           payload: input.model ? { model: input.model } : {},
           providerRefs: {},
         });
-
-        const message = buildUserMessage(input);
 
         yield* Queue.offer(context.promptQueue, {
           type: "message",

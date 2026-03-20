@@ -17,7 +17,9 @@ import { makeClaudeAdapterLive, type ClaudeAdapterLiveOptions } from "./ClaudeAd
 class FakeClaudeQuery implements AsyncIterable<SDKMessage> {
   private readonly queue: Array<SDKMessage> = [];
   private readonly resolvers: Array<(value: IteratorResult<SDKMessage>) => void> = [];
+  private readonly rejectors: Array<(error: unknown) => void> = [];
   private done = false;
+  private failure: unknown;
 
   public readonly interruptCalls: Array<void> = [];
   public readonly setModelCalls: Array<string | undefined> = [];
@@ -45,6 +47,19 @@ class FakeClaudeQuery implements AsyncIterable<SDKMessage> {
     for (const resolver of this.resolvers.splice(0)) {
       resolver({ done: true, value: undefined });
     }
+    this.rejectors.splice(0);
+  }
+
+  fail(error: unknown): void {
+    if (this.done) {
+      return;
+    }
+    this.done = true;
+    this.failure = error;
+    for (const reject of this.rejectors.splice(0)) {
+      reject(error);
+    }
+    this.resolvers.splice(0);
   }
 
   readonly interrupt = async (): Promise<void> => {
@@ -81,13 +96,17 @@ class FakeClaudeQuery implements AsyncIterable<SDKMessage> {
           }
         }
         if (this.done) {
+          if (this.failure !== undefined) {
+            return Promise.reject(this.failure);
+          }
           return Promise.resolve({
             done: true,
             value: undefined,
           });
         }
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           this.resolvers.push(resolve);
+          this.rejectors.push(reject);
         });
       },
     };
@@ -117,30 +136,38 @@ const ORIGINAL_BEDROCK_ENV = Object.fromEntries(
 interface Harness {
   readonly layer: ReturnType<typeof makeClaudeAdapterLive>;
   readonly query: FakeClaudeQuery;
+  readonly queries: ReadonlyArray<FakeClaudeQuery>;
   readonly getLastCreateQueryInput: () =>
     | {
         readonly prompt: AsyncIterable<SDKUserMessage>;
         readonly options: ClaudeQueryOptions;
       }
     | undefined;
+  readonly getCreateQueryInputs: () => ReadonlyArray<{
+    readonly prompt: AsyncIterable<SDKUserMessage>;
+    readonly options: ClaudeQueryOptions;
+  }>;
 }
 
 function makeHarness(config?: {
   readonly nativeEventLogPath?: string;
   readonly nativeEventLogger?: ClaudeAdapterLiveOptions["nativeEventLogger"];
+  readonly queries?: ReadonlyArray<FakeClaudeQuery>;
 }): Harness {
-  const query = new FakeClaudeQuery();
-  let createInput:
-    | {
-        readonly prompt: AsyncIterable<SDKUserMessage>;
-        readonly options: ClaudeQueryOptions;
-      }
-    | undefined;
+  const queries = config?.queries ?? [new FakeClaudeQuery()];
+  const query = queries[0] ?? new FakeClaudeQuery();
+  const createInputs: Array<{
+    readonly prompt: AsyncIterable<SDKUserMessage>;
+    readonly options: ClaudeQueryOptions;
+  }> = [];
+  let createQueryIndex = 0;
 
   const adapterOptions: ClaudeAdapterLiveOptions = {
     createQuery: (input) => {
-      createInput = input;
-      return query;
+      createInputs.push(input);
+      const nextQuery = queries[createQueryIndex] ?? queries.at(-1) ?? query;
+      createQueryIndex += 1;
+      return nextQuery;
     },
     ...(config?.nativeEventLogger
       ? {
@@ -157,7 +184,9 @@ function makeHarness(config?: {
   return {
     layer: makeClaudeAdapterLive(adapterOptions),
     query,
-    getLastCreateQueryInput: () => createInput,
+    queries,
+    getLastCreateQueryInput: () => createInputs.at(-1),
+    getCreateQueryInputs: () => createInputs,
   };
 }
 
@@ -2169,6 +2198,80 @@ describe("ClaudeAdapterLive", () => {
         nativeThreadIds.every((threadId) => threadId === String(THREAD_ID)),
         true,
       );
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+    );
+  });
+
+  it.effect("retries once when Claude exits before startup and preserves the pending turn", () => {
+    const firstQuery = new FakeClaudeQuery();
+    const secondQuery = new FakeClaudeQuery();
+    const harness = makeHarness({
+      queries: [firstQuery, secondQuery],
+    });
+
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+
+      const session = yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: "claudeAgent",
+        runtimeMode: "full-access",
+      });
+
+      const turnCompletedFiber = yield* Stream.filter(
+        adapter.streamEvents,
+        (event) => event.type === "turn.completed",
+      ).pipe(Stream.runHead, Effect.forkChild);
+
+      yield* adapter.sendTurn({
+        threadId: session.threadId,
+        input: "retry this turn",
+        attachments: [],
+      });
+
+      firstQuery.fail(new Error("Claude Code process exited with code 1"));
+
+      secondQuery.emit({
+        type: "system",
+        subtype: "init",
+        session_id: "sdk-session-retry",
+        uuid: "system-init-retry",
+      } as unknown as SDKMessage);
+
+      secondQuery.emit({
+        type: "assistant",
+        session_id: "sdk-session-retry",
+        uuid: "assistant-retry",
+        parent_tool_use_id: null,
+        message: {
+          id: "assistant-message-retry",
+          content: [{ type: "text", text: "Recovered" }],
+        },
+      } as unknown as SDKMessage);
+
+      secondQuery.emit({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        errors: [],
+        session_id: "sdk-session-retry",
+        uuid: "result-retry",
+      } as unknown as SDKMessage);
+
+      const turnCompleted = yield* Fiber.join(turnCompletedFiber);
+      assert.equal(turnCompleted._tag, "Some");
+      if (turnCompleted._tag !== "Some" || turnCompleted.value.type !== "turn.completed") {
+        return;
+      }
+
+      assert.equal(turnCompleted.value.payload.state, "completed");
+      assert.equal(harness.getCreateQueryInputs().length, 2);
+
+      const secondCreateInput = harness.getCreateQueryInputs()[1];
+      const promptText = yield* Effect.promise(() => readFirstPromptText(secondCreateInput));
+      assert.equal(promptText, "retry this turn");
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),

@@ -2,6 +2,8 @@ import { MessageId } from "@t3tools/contracts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+let MessagesTimeline: (typeof import("./MessagesTimeline"))["MessagesTimeline"];
+
 function matchMedia() {
   return {
     matches: false,
@@ -10,7 +12,7 @@ function matchMedia() {
   };
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   const classList = {
     add: () => {},
     remove: () => {},
@@ -40,11 +42,12 @@ beforeAll(() => {
     callback(0);
     return 0;
   });
+
+  ({ MessagesTimeline } = await import("./MessagesTimeline"));
 });
 
 describe("MessagesTimeline", () => {
-  it("renders inline terminal labels with the composer chip UI", async () => {
-    const { MessagesTimeline } = await import("./MessagesTimeline");
+  it("renders inline terminal labels with the composer chip UI", () => {
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         hasMessages

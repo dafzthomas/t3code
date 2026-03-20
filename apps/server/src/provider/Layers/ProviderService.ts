@@ -295,8 +295,21 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           threadId,
           provider: parsed.provider ?? "codex",
         };
+        const existingBindingOption = yield* directory.getBinding(threadId);
+        const existingBinding = Option.getOrUndefined(existingBindingOption);
+        const canReusePersistedBinding =
+          existingBinding !== undefined && existingBinding.provider === input.provider;
+        const startInput = {
+          ...input,
+          ...(input.resumeCursor === undefined &&
+          canReusePersistedBinding &&
+          existingBinding.resumeCursor !== undefined &&
+          existingBinding.resumeCursor !== null
+            ? { resumeCursor: existingBinding.resumeCursor }
+            : {}),
+        };
         const adapter = yield* registry.getByProvider(input.provider);
-        const session = yield* adapter.startSession(input);
+        const session = yield* adapter.startSession(startInput);
 
         if (session.provider !== adapter.provider) {
           return yield* toValidationError(
@@ -512,6 +525,15 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
 
     const runStopAll = () =>
       Effect.gen(function* () {
+        const sessionsByProvider = yield* Effect.forEach(adapters, (adapter) =>
+          adapter.listSessions(),
+        );
+        const activeSessions = sessionsByProvider.flatMap((sessions) => sessions);
+        yield* Effect.forEach(
+          activeSessions,
+          (session) => upsertSessionBinding(session, session.threadId),
+          { concurrency: "unbounded" },
+        ).pipe(Effect.asVoid);
         const threadIds = yield* directory.listThreadIds();
         yield* Effect.forEach(adapters, (adapter) => adapter.stopAll()).pipe(Effect.asVoid);
         yield* Effect.forEach(threadIds, (threadId) =>

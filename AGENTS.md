@@ -4,6 +4,7 @@
 
 - All of `bun fmt`, `bun lint`, and `bun typecheck` must pass before considering tasks completed.
 - NEVER run `bun test`. Always use `bun run test` (runs Vitest).
+- If `source ~/.nvm/nvm.sh && nvm use` fails because `.nvmrc` is missing, use the exact Node version from `package.json` `engines.node`.
 
 ## Project Snapshot
 
